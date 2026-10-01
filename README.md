@@ -1,10 +1,12 @@
-# Startup Template
+# Repo Onboarding
+
+Paste a GitHub repository and get a guided walkthrough of the parts that matter.
 
 ## What this is
 
-A production-oriented monorepo for starting a new web application.
+Repo Onboarding is a web application in a production-oriented monorepo.
 
-It ships with the parts most products need on day one, already wired together and verified in CI:
+It starts from the parts most products need on day one, already wired together and verified in CI:
 
 - a Next.js application in a pnpm and Turborepo workspace
 - PostgreSQL with Drizzle migrations
@@ -18,7 +20,7 @@ It ships with the parts most products need on day one, already wired together an
 
 Every integration except the database and authentication is optional locally. The application builds and runs without an email provider or Stripe, TypeSafe, Sentry, or PostHog accounts.
 
-The template lives at [github.com/allen-padilla/startup-template](https://github.com/allen-padilla/startup-template) and is set up as a GitHub template repository. New here? [Building a Product with an Agent](docs/guides/building-with-an-agent.md) walks an example product from cloning the template to shipping features, with a prompt for every step.
+The project was created from the [allen-padilla/startup-template](https://github.com/allen-padilla/startup-template) template repository. New here? [Building a Product with an Agent](docs/guides/building-with-an-agent.md) shows how to build features here with a coding agent, with a prompt for every step.
 
 ### Stack
 
@@ -48,18 +50,18 @@ The template lives at [github.com/allen-padilla/startup-template](https://github
 
 On Windows, work inside WSL and keep the repository on the Linux filesystem.
 
-### Create and Run
+### Clone and Run
 
-Create your own repository from the template, either with **Use this template** on the [repository page](https://github.com/allen-padilla/startup-template) or with the GitHub CLI:
+Clone the repository:
 
 ```bash
-gh repo create my-app --template allen-padilla/startup-template --private --clone
+git clone https://github.com/allen-padilla/repo-onboarding.git
 ```
 
 Then set up and start the application:
 
 ```bash
-cd my-app
+cd repo-onboarding
 
 corepack enable
 pnpm install --frozen-lockfile
@@ -150,7 +152,7 @@ Dashed services are optional locally. For how a payment becomes paid access, see
 
 | Route                        | What it does                                                                                 |
 | ---------------------------- | -------------------------------------------------------------------------------------------- |
-| `/`                          | placeholder landing page; "Get Started" goes to `/sign-up`                                   |
+| `/`                          | landing page; "Get Started" goes to `/sign-up`                                               |
 | `/sign-up`                   | name, email, and password; signs the user in and sends a verification email                  |
 | `/sign-in`                   | email and password; one message for every failed sign-in                                     |
 | `/forgot-password`           | requests a reset link; the same message for every address                                    |
@@ -288,4 +290,4 @@ You may use it for any project, open source or proprietary. Keep the template's 
 
 ---
 
-Maintained by Allen.
+Repo Onboarding by Allen.

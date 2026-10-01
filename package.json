@@ -1,8 +1,8 @@
 {
-  "name": "startup-template",
+  "name": "repo-onboarding",
   "version": "1.0.0",
   "private": true,
-  "description": "Production-oriented startup application template.",
+  "description": "Paste a GitHub repository and get a guided walkthrough of the parts that matter.",
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",

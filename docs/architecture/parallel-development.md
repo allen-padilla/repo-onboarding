@@ -20,7 +20,7 @@ When no parallel work is active, a small, well-scoped task may still use the nor
 
 ## Main Checkout as Coordinator
 
-The main checkout, `~/dev/startup-template`, stays on `main`. Once several tasks are running at the same time, it is used primarily for:
+The main checkout, `~/dev/repo-onboarding`, stays on `main`. Once several tasks are running at the same time, it is used primarily for:
 
 - updating `main`
 - creating worktrees
@@ -35,11 +35,11 @@ Feature implementation happens in task worktrees. This keeps `main` clean and ma
 
 Worktrees live in `~/dev/worktrees/`, outside the main checkout:
 
-`~/dev/worktrees/startup-template-<task>`
+`~/dev/worktrees/repo-onboarding-<task>`
 
-For example, `~/dev/worktrees/startup-template-profile-settings`.
+For example, `~/dev/worktrees/repo-onboarding-profile-settings`.
 
-Never create a worktree inside `~/dev/startup-template`. A nested worktree shows up as untracked files in the main checkout and can be scanned by repository tooling.
+Never create a worktree inside `~/dev/repo-onboarding`. A nested worktree shows up as untracked files in the main checkout and can be scanned by repository tooling.
 
 ## Branch Naming
 
@@ -57,12 +57,12 @@ Use the same `<task>` in the branch and worktree names, so each worktree maps to
 From the main checkout:
 
 ```bash
-cd ~/dev/startup-template
+cd ~/dev/repo-onboarding
 git switch main
 git pull
 
 git worktree add -b feat/<task> \
-  ~/dev/worktrees/startup-template-<task> \
+  ~/dev/worktrees/repo-onboarding-<task> \
   main
 
 git worktree list
@@ -260,11 +260,11 @@ Use the repository `review` command (`.agents/commands/review.md`) or the `revie
 After the pull request is merged, clean up from the main checkout:
 
 ```bash
-cd ~/dev/startup-template
+cd ~/dev/repo-onboarding
 git switch main
 git pull
 
-git worktree remove ~/dev/worktrees/startup-template-<task>
+git worktree remove ~/dev/worktrees/repo-onboarding-<task>
 git worktree prune
 git worktree list
 ```
