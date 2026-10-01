@@ -94,7 +94,7 @@ The E2E job also runs the Mailpit mail catcher as a service container, so the em
 - ports: `1025` (SMTP) and `8025` (web API) on `localhost`
 - health check: `/mailpit readyz`
 
-The job sets `SMTP_URL=smtp://localhost:1025` and `EMAIL_FROM="Startup Template <no-reply@example.com>"`. Both are safe to commit: they reach only the throwaway Mailpit on the runner, and nothing leaves it. Change the Mailpit version in `compose.yaml` and `e2e.yml` together.
+The job sets `SMTP_URL=smtp://localhost:1025` and `EMAIL_FROM="Repo Onboarding <no-reply@example.com>"`. Both are safe to commit: they reach only the throwaway Mailpit on the runner, and nothing leaves it. Change the Mailpit version in `compose.yaml` and `e2e.yml` together.
 
 The Verify job leaves both email variables unset, so every pull request also proves that the application builds with email disabled.
 

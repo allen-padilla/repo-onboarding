@@ -50,7 +50,7 @@ jobs:
       BETTER_AUTH_SECRET: ci-only-secret-that-is-long-enough-for-validation
       BETTER_AUTH_URL: http://127.0.0.1:3000
       SMTP_URL: smtp://localhost:1025
-      EMAIL_FROM: "Startup Template <no-reply@example.com>"
+      EMAIL_FROM: "Repo Onboarding <no-reply@example.com>"
 
     steps:
       - name: Checkout
