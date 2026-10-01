@@ -1,6 +1,6 @@
 # @startup/web
 
-Next.js App Router application for the startup template.
+Next.js App Router application for Repo Onboarding.
 
 Run commands from the repository root with pnpm:
 

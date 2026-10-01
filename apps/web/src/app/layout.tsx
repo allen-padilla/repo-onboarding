@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Startup Template",
-  description: "A production-oriented startup application template.",
+  title: "Repo Onboarding",
+  description:
+    "Paste a GitHub repository and get a guided walkthrough of the parts that matter.",
 };
 
 export default function RootLayout({
