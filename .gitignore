@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Builds
+.next/
+dist/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# Environment: only .env.example is committed
+.env*
+!.env.example
+
+# Logs
+*.log
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# Deployment
+.vercel/

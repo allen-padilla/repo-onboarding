@@ -1,0 +1,41 @@
+{
+  "name": "startup-template",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-oriented startup application template.",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "agent:check": "node scripts/check-agent-harness.mjs",
+    "verify": "pnpm agent:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres",
+    "db:generate": "pnpm --filter @startup/db db:generate",
+    "db:migrate": "pnpm --filter @startup/db db:migrate",
+    "db:studio": "pnpm --filter @startup/db db:studio",
+    "test": "turbo test",
+    "test:run": "turbo test -- --run",
+    "test:e2e": "./scripts/build-e2e.sh && playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "verify:full": "pnpm verify && pnpm test:e2e"
+  },
+  "keywords": [],
+  "author": "Allen",
+  "license": "MIT",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.6.0",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.6.0",
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "turbo": "^2.11.5"
+  }
+}
