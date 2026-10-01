@@ -12,5 +12,11 @@ export default defineConfig({
       EMAIL_FROM: "",
     },
     setupFiles: ["./src/testing/no-network.ts"],
+    // Each test starts PGlite, applies the migrations, installs pg-boss, and
+    // creates the queues. That takes about 1 s locally and up to about 8.5 s
+    // on CI runners, where other packages' PGlite suites run at the same time,
+    // beyond Vitest's 5 s default.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
 });
