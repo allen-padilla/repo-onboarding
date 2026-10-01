@@ -52,6 +52,7 @@ These have working local defaults, or are left to each product. Each needs a rea
 - [ ] **Stripe webhook endpoint**: `https://<your-domain>/api/billing/webhook`, with its signing secret in `STRIPE_WEBHOOK_SECRET`.
 - [ ] **Stripe API key**: `STRIPE_SECRET_KEY`. Use test-mode keys everywhere except production.
 - [ ] **Sentry organization and project**: `NEXT_PUBLIC_SENTRY_DSN`, and `SENTRY_ORG`, `SENTRY_PROJECT`, and `SENTRY_AUTH_TOKEN` for source maps.
+- [ ] **GitHub token**: `GITHUB_API_TOKEN`, a fine-grained token with read-only access to public repositories only. Without one, the server shares GitHub's limit of 60 API calls per hour, about 10 repository analyses. See `docs/architecture/repository-analysis.md`.
 - [ ] **SMTP provider**: `SMTP_URL` for a hosted provider, Amazon SES, or your own relay. Never the local Mailpit. See `docs/architecture/email.md`.
 - [ ] **Sender domain verification**: SPF and DKIM records for the domain in `EMAIL_FROM`, plus a DMARC policy. Without them, providers reject messages or deliver them as spam.
 - [ ] **PostHog project**: `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`, and `NEXT_PUBLIC_POSTHOG_HOST` for your region. The example host is the US region.

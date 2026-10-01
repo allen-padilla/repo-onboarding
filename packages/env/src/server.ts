@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { emailFrom, smtpUrl } from "./email";
+import { githubApiToken, githubApiUrl } from "./github";
 import { optional } from "./optional";
 
 export const serverSchema = z
@@ -28,6 +29,12 @@ export const serverSchema = z
     // @startup/email raises a configuration error when sending while disabled.
     SMTP_URL: optional(smtpUrl),
     EMAIL_FROM: optional(emailFrom),
+
+    // GitHub works without a token. The token only raises rate limits, and
+    // must not have access to private repositories. @startup/github defaults
+    // the API URL to https://api.github.com; only tests change it.
+    GITHUB_API_TOKEN: optional(githubApiToken),
+    GITHUB_API_URL: optional(githubApiUrl),
   })
   .superRefine((env, ctx) => {
     const missing = env.SMTP_URL
@@ -61,4 +68,6 @@ export const serverEnv = serverSchema.parse({
   TYPESAFE_MODEL: process.env.TYPESAFE_MODEL,
   SMTP_URL: process.env.SMTP_URL,
   EMAIL_FROM: process.env.EMAIL_FROM,
+  GITHUB_API_TOKEN: process.env.GITHUB_API_TOKEN,
+  GITHUB_API_URL: process.env.GITHUB_API_URL,
 });

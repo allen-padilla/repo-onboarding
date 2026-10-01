@@ -100,3 +100,57 @@ describe("email configuration", () => {
     expect(message).not.toContain("user:");
   });
 });
+
+describe("GitHub configuration", () => {
+  function parseGitHub(github: { GITHUB_API_TOKEN?: string; GITHUB_API_URL?: string }) {
+    return serverSchema.safeParse({ ...required, ...github });
+  }
+
+  it("is optional, and empty values are unset", () => {
+    for (const github of [{}, { GITHUB_API_TOKEN: "", GITHUB_API_URL: "" }]) {
+      const result = parseGitHub(github);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.GITHUB_API_TOKEN).toBeUndefined();
+      expect(result.data?.GITHUB_API_URL).toBeUndefined();
+    }
+  });
+
+  it("accepts a token and an https API URL, or http on a loopback host", () => {
+    for (const url of [
+      "https://api.github.com",
+      "https://github.example.com/api/v3",
+      "http://127.0.0.1:9998",
+      "http://localhost:9998",
+    ]) {
+      expect(parseGitHub({ GITHUB_API_TOKEN: "github_pat_example", GITHUB_API_URL: url }).success, url).toBe(true);
+    }
+  });
+
+  it("rejects a token with spaces or line breaks, without echoing it", () => {
+    for (const token of ["github_pat_s3cret value", "github_pat_s3cret\r\nX-Injected: 1"]) {
+      const result = parseGitHub({ GITHUB_API_TOKEN: token });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toContain("GITHUB_API_TOKEN");
+      expect(result.error?.message).not.toContain("s3cret");
+    }
+  });
+
+  it("rejects an API URL that is not https, or that carries credentials, a query, or a fragment", () => {
+    for (const url of [
+      "not a url",
+      "http://api.github.com",
+      "http://10.0.0.5:9998",
+      "ftp://api.github.com",
+      "https://user:pass@api.github.com",
+      "https://api.github.com?x=1",
+      "https://api.github.com#x",
+    ]) {
+      const result = parseGitHub({ GITHUB_API_URL: url });
+
+      expect(result.success, url).toBe(false);
+      expect(result.error?.message).toContain("GITHUB_API_URL");
+    }
+  });
+});

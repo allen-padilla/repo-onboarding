@@ -38,6 +38,7 @@ flowchart TD
   decision["@startup/decision"]
   email["@startup/email"]
   env["@startup/env"]
+  github["@startup/github"]
   jobs["@startup/jobs"]
 
   web --> auth
@@ -52,6 +53,7 @@ flowchart TD
   db --> env
   decision --> env
   email --> env
+  github --> env
   jobs --> db
   jobs --> env
 ```
@@ -132,6 +134,17 @@ Transactional email over SMTP: `sendEmail`, `createEmailSender`, typed message t
 Server-only. Owns the `nodemailer` dependency. Depends on `@startup/env`. The only code that opens an SMTP connection.
 
 See `email.md`.
+
+### @startup/github
+
+Public GitHub repositories through the REST API: repository metadata, branch heads, file listings, single files, and files read from the repository's archive, with typed `GitHub*` errors.
+
+- `@startup/github` is server-only. It is the only code that calls GitHub, and it owns the `tar-stream` dependency.
+- `@startup/github/url` exports `parseRepositoryUrl`, the rule for repository URLs that users submit. It is browser-safe and has no imports.
+
+Depends on `@startup/env`. No application currently depends on it.
+
+See `repository-analysis.md`.
 
 ### @startup/jobs
 

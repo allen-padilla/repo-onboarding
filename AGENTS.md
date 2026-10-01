@@ -155,6 +155,16 @@ Email code lives in `packages/email` (`@startup/email`). It is the only code tha
 
 See `docs/architecture/email.md`.
 
+## GitHub
+
+GitHub code lives in `packages/github` (`@startup/github`). It is the only code that calls GitHub.
+
+- Only public repositories are read, even when the token could read private ones.
+- Never fetch a URL a user submitted. Parse it with `parseRepositoryUrl` and let the client build every request.
+- `GITHUB_API_TOKEN` is a server-only secret and is sent to the GitHub API origin only.
+
+See `docs/architecture/repository-analysis.md`.
+
 ## Jobs
 
 Background jobs use pg-boss through `packages/jobs` (`@startup/jobs`). It is the only code that imports `pg-boss`.
