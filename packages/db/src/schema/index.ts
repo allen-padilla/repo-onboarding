@@ -15,3 +15,11 @@ export {
   subscriptionsRelations,
 } from "./billing";
 export { emailRateLimit } from "./email";
+export {
+  analysisRequests,
+  analysisRequestsRelations,
+  FAILURE_REASONS,
+  REPOSITORY_STATUSES,
+  repositories,
+  repositoriesRelations,
+} from "./onboarding";

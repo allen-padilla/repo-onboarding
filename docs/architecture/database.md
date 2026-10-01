@@ -43,6 +43,15 @@ Billing tables (`billing_customers`, `subscriptions`) are defined in:
 
 `packages/db/src/schema/billing.ts`
 
+Repository analysis tables are defined in:
+
+`packages/db/src/schema/onboarding.ts`
+
+- `repositories`: each repository a user added, its analysis status, the current job, coverage counts, and the walkthrough. A user has each repository once: `(user_id, full_name_key)` is unique, where `full_name_key` is the lowercase `owner/name`. Check constraints limit `status` and `failure_reason` to fixed sets, and a reason is present exactly when the status is `failed`.
+- `analysis_requests`: one row per add or retry request, for the hourly request limit and the daily analysis cap. Rows do not reference `repositories`, so deleting a repository leaves them in place.
+
+Both cascade when their user is deleted. The walkthrough never contains file contents. See `docs/specs/repo-onboarding-core.md`.
+
 Rate-limit tables are defined with the tables of the code that uses them:
 
 - `rate_limit` in `packages/db/src/schema/auth.ts`: Better Auth's per-client counters (model `rateLimit`), keyed by client IP and path.
