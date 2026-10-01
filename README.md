@@ -192,7 +192,7 @@ Run commands from the repository root.
 | `pnpm dev`         | starts the Next.js development server on <http://localhost:3000>                                 |
 | `pnpm db:up`       | starts PostgreSQL (`5432`) and Mailpit (`1025`, `8025`) on `127.0.0.1`, waits until ready        |
 | `pnpm db:down`     | stops and removes the containers; the data volume is kept                                        |
-| `pnpm db:migrate`  | applies the committed migrations in `packages/db/drizzle/`                                       |
+| `pnpm db:migrate`  | applies the committed migrations in `packages/db/drizzle/`, then installs or upgrades the job queue (pg-boss) and its queues; run it again after pulling changes to either |
 | `pnpm db:generate` | generates a new migration from schema changes                                                    |
 | `pnpm db:studio`   | opens Drizzle Studio                                                                             |
 | `pnpm db:logs`     | follows the PostgreSQL logs                                                                      |

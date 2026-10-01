@@ -47,6 +47,7 @@ These have working local defaults, or are left to each product. Each needs a rea
 - [ ] **`BETTER_AUTH_URL`**: the production origin. The local default is `http://localhost:3000`.
 - [ ] **`BETTER_AUTH_SECRET`**: a new value for each environment. Never reuse the CI placeholder or a value from another project.
 - [ ] **`DATABASE_URL`**: a managed PostgreSQL database with its own credentials.
+- [ ] **Release step**: run `pnpm db:migrate` before each deploy. It applies the Drizzle migrations and installs or upgrades the job queue's `pgboss` schema, which no process does on start. Upgrading `pg-boss` has its own procedure in `docs/architecture/jobs.md`.
 - [ ] **Stripe products and prices**: create the product and its recurring price in your Stripe account, in test mode and again in live mode. Set `STRIPE_PRICE_PRO_MONTHLY` to the Price ID.
 - [ ] **Stripe webhook endpoint**: `https://<your-domain>/api/billing/webhook`, with its signing secret in `STRIPE_WEBHOOK_SECRET`.
 - [ ] **Stripe API key**: `STRIPE_SECRET_KEY`. Use test-mode keys everywhere except production.

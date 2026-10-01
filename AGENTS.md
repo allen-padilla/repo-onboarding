@@ -155,6 +155,17 @@ Email code lives in `packages/email` (`@startup/email`). It is the only code tha
 
 See `docs/architecture/email.md`.
 
+## Jobs
+
+Background jobs use pg-boss through `packages/jobs` (`@startup/jobs`). It is the only code that imports `pg-boss`.
+
+- `pnpm db:migrate` installs and upgrades pg-boss's `pgboss` schema and creates the queues listed in `packages/jobs/src/queues.ts`. Applications never migrate pg-boss when they start.
+- Send a job inside the transaction that saves its work, with `inTransaction(tx)`.
+- Job handlers return nothing and throw only errors that are safe to store. pg-boss keeps thrown errors in the database.
+- `pg-boss` is pinned exactly. An upgrade is a schema change with its own release procedure.
+
+See `docs/architecture/jobs.md`.
+
 ## Testing
 
 Vitest is used for fast unit and integration-level tests.

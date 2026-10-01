@@ -38,6 +38,7 @@ flowchart TD
   decision["@startup/decision"]
   email["@startup/email"]
   env["@startup/env"]
+  jobs["@startup/jobs"]
 
   web --> auth
   web --> billing
@@ -51,6 +52,8 @@ flowchart TD
   db --> env
   decision --> env
   email --> env
+  jobs --> db
+  jobs --> env
 ```
 
 Arrows point from a package to what it depends on. Every package also uses `@startup/typescript-config`, which is left out to keep the graph readable.
@@ -129,3 +132,14 @@ Transactional email over SMTP: `sendEmail`, `createEmailSender`, typed message t
 Server-only. Owns the `nodemailer` dependency. Depends on `@startup/env`. The only code that opens an SMTP connection.
 
 See `email.md`.
+
+### @startup/jobs
+
+Background jobs in PostgreSQL through pg-boss: producer and worker queues, the queue registry (`QUEUES`), sending inside a Drizzle transaction (`inTransaction`), the `jobs:migrate` release step, and `JobQueueUnavailableError`.
+
+- `@startup/jobs` is server-only. It owns the `pg-boss` dependency and is the only code that imports it.
+- `@startup/jobs/testing` exports `createTestJobQueue()` for tests: pg-boss on in-memory PGlite.
+
+Depends on `@startup/db` and `@startup/env`. No application currently depends on it.
+
+See `jobs.md`.

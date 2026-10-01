@@ -133,9 +133,9 @@ Verification: `pnpm agent:check`.
 
 | File | Change |
 | --- | --- |
-| `packages/jobs/package.json`, `tsconfig.json`, `vitest.config.ts` (new) | `@startup/jobs`, entry points `.` and `./testing`. `pg-boss` pinned exactly: the newest release older than pnpm's minimum release age. Depends on `@startup/db` and `@startup/env`. Dev: PGlite, also declared by every package that imports `./testing`. Scripts: `typecheck`, `test`, `jobs:migrate`, `jobs:plans`. Tests load a no-network setup file, as in `@startup/email`. |
+| `packages/jobs/package.json`, `tsconfig.json`, `vitest.config.ts` (new) | `@startup/jobs`, entry points `.` and `./testing`. `pg-boss` pinned exactly: the newest release older than pnpm's minimum release age. Depends on `@startup/db` and `@startup/env`. Dev: PGlite, `drizzle-orm`, and `tsx`. `@startup/db`'s `pg` range moves to `^8.23.1`, the version pg-boss requires, so the workspace keeps one `pg` and one `drizzle-orm` variant. Scripts: `typecheck`, `test`, `jobs:migrate`, `jobs:plans`. Tests load a no-network setup file, as in `@startup/email`. |
 | `packages/jobs/src/queues.ts` | The queue registry: `analysis-failed` (dead letter), `analysis` (`retryLimit: 1`, `retryDelay: 0`, `heartbeatSeconds: 30`, `expireInSeconds: 960`, `retentionSeconds` 30 days, dead letter `analysis-failed`), and `onboarding-maintenance`. Dead-letter queues are listed first. |
-| `packages/jobs/src/queue.ts` | `getJobQueue({ role })`: one started `PgBoss` per process, kept on `globalThis` (Next.js bundles instrumentation and routes separately, as in `packages/auth/src/report.ts`). Always `migrate: false`. `producer`: `max: 2`, `supervise: false`, `schedule: false`, started on first use, raising `JobQueueUnavailableError` when it cannot start. `worker`: supervision and scheduling on. `useListenNotify` off, because it does not work through transaction-mode poolers. Errors go to an injected reporter. |
+| `packages/jobs/src/queue.ts` | `createJobQueue(role)` and `startJobQueue(queue)`: a `PgBoss` that is always `migrate: false`; a failed start raises `JobQueueUnavailableError` (`not_installed`, `migration_required`, `unreachable`, never the underlying error) and stops the instance. `producer`: `max: 2`, `supervise: false`, `schedule: false`. `worker`: supervision and scheduling on. `getJobQueue()`: the process's producer, started on first use and kept on `globalThis` (Next.js bundles instrumentation and routes separately, as in `packages/auth/src/report.ts`); a failed start is not kept. `useListenNotify` off, because it does not work through transaction-mode poolers. `setJobQueueErrorReporter` routes pg-boss's background errors. |
 | `packages/jobs/src/transaction.ts` | `inTransaction(tx)`: wraps a Drizzle transaction with `fromDrizzle(tx, sql)`, using `sql` from `@startup/db`. |
 | `packages/jobs/src/migrate.ts` | Release script. Resolves `DATABASE_URL` the way `packages/db/drizzle.config.ts` does (shell, then the root `.env.local`). Runs the pinned `pg-boss migrate` with `PGBOSS_DATABASE_URL` in the child environment only, never on the command line and never printed. Then starts an instance and creates every queue in `queues.ts`, updating options on queues that already exist (`createQueue` does nothing when the queue exists). `jobs:plans` prints the pending SQL with `pg-boss plans migrate --dry-run` for review. |
 | `packages/jobs/src/testing/queue.ts` | Test helper: PGlite with the repository migrations, the pg-boss schema installed through `fromPglite` with `migrate: true` and `backend: 'pglite'` (tests only), the queues created, then a fresh instance started so its queue cache is loaded. Without that order, a `send` inside a Drizzle transaction waits forever behind PGlite's single connection. Also `TestClock` and job spies. |
@@ -242,7 +242,7 @@ Every query filters by the user ID. Another user's repository raises the same er
 | `apps/worker/package.json` etc. (new) | `@startup/worker`. Depends on `@startup/onboarding`, `@startup/jobs`, `@startup/env`, `@sentry/node` (same version as `@sentry/nextjs`), and `tsx`. Scripts: `dev` (`tsx watch src/main.ts`, run by `turbo dev`), `start` (`tsx src/main.ts`), `typecheck`. |
 | `apps/worker/src/load-env.ts` | Imported first. Loads the root `.env.local` with `process.loadEnvFile` when it exists, like `next.config.ts`. |
 | `apps/worker/src/sentry.ts` | Errors only: DSN from `NEXT_PUBLIC_SENTRY_DSN`, `tracesSampleRate: 0`, `beforeBreadcrumb` returns `null`, the web app's `dataCollection` block plus `stackFrameVariables: false`, and `beforeSend` keeping the sanitized error, the analysis ID, and the step. |
-| `apps/worker/src/main.ts` | Start-up that retries while the database or the pg-boss schema is not ready, real clients, `getJobQueue({ role: "worker" })`, `startAnalysisWorker`, prints `worker ready`. On SIGTERM or SIGINT: stop claiming, abort handlers, mark their repositories `queued`, then `stop()` within its timeout. |
+| `apps/worker/src/main.ts` | Start-up that retries while the database or the pg-boss schema is not ready, real clients, `startJobQueue(createJobQueue("worker"))`, `startAnalysisWorker`, prints `worker ready`. On SIGTERM or SIGINT: stop claiming, abort handlers, mark their repositories `queued`, then `stop()` within its timeout. |
 | `docs/architecture/repository-analysis.md` | The steps, the time budget, the queue handlers, interruptions, limits, failure reasons, storage, and security. |
 | `docs/architecture/deployment.md` | The worker: a long-running host (not Vercel), `pnpm --filter @startup/worker start`, its variables (it validates the same required server variables as the web app), graceful shutdown, the release checklist. |
 | `docs/architecture/observability.md` | Worker error reporting and what it never sends. |
@@ -322,7 +322,7 @@ Indexes: unique `(user_id, full_name_key)`, `(user_id, created_at)`, `(job_id)`,
 
 | Package | Tests |
 | --- | --- |
-| `@startup/jobs` | A job sent in a transaction is visible only after commit and disappears on rollback. A `migrate: false` instance refuses to start without the schema or with a different version. A producer that cannot start raises `JobQueueUnavailableError`. `jobs:migrate` creates the queues and applies changed options. A cancelled job's `signal` aborts at the next heartbeat. |
+| `@startup/jobs` | A job sent in a transaction is visible only after commit and disappears on rollback. A `migrate: false` instance refuses to start without the schema or with a different version. A producer that cannot start raises `JobQueueUnavailableError`. `jobs:migrate` creates the queues and applies changed options. A failed start is not kept by `getJobQueue`. (A cancelled job's `signal` aborting at the next heartbeat is pg-boss behavior; it is tested in Slice 6 as "a deleted repository's run saves nothing".) |
 | `@startup/github` | URL parsing, including every rejection. With a fake `fetch`: field mapping, 404 and private, 409, rate limit with reset time, truncated tree, archives built in the test with `tar-stream`, the download cap, the redirect allow-list, and the token never appearing in errors or redirected requests. |
 | `@startup/generation` | A parsed result, refusal, invalid output, `max_tokens`, 429, timeout, abort through `signal`, configuration errors, no key or prompt in any error, nothing read from `ANTHROPIC_*` in `process.env` by the SDK. |
 | `@startup/env` | Anthropic pair validation. `GITHUB_API_URL` rules. |
@@ -373,6 +373,13 @@ A separate agent reviewed this plan on 2026-10-01. These changes came from that 
 - More tests: concurrent adds, writer failure then retry, rate-limit re-queues, link encoding, quoted code.
 - The spec records `GITHUB_API_URL`, the root `.gitattributes`, and the 450-candidate bound.
 - No prompt caching: each prompt is sent once.
+
+## Implementation Notes
+
+Differences from the plan, recorded as each slice lands.
+
+- **Slice 1.** A third check constraint: a repository has a `failure_reason` exactly when its `status` is `failed`. `REPOSITORY_STATUSES` and `FAILURE_REASONS` are exported from the schema for later slices.
+- **Slice 2.** `getJobQueue()` is the producer only. The worker uses `createJobQueue("worker")` and `startJobQueue`. `JobQueueUnavailableError` carries a `reason` and no `cause`, following `@startup/email`'s errors. `@startup/db`'s `pg` range moved to `^8.23.1`, the version pg-boss requires, so the workspace keeps one `pg` and one `drizzle-orm` variant. The heartbeat-cancel test moved to Slice 6.
 
 ## Verification
 
