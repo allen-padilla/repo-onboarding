@@ -91,10 +91,11 @@ Migrations are a deliberate release step. The application never migrates the dat
 pnpm db:migrate
 ```
 
-`pnpm db:migrate` applies the committed migrations in `packages/db/drizzle/` to the database in `DATABASE_URL`. A value in the shell environment takes precedence over the root `.env.local`.
+`pnpm db:migrate` applies the committed migrations in `packages/db/drizzle/` to the database in `DATABASE_URL`, then installs or upgrades pg-boss's `pgboss` schema and creates or updates its queues (`jobs.md`). A value in the shell environment takes precedence over the root `.env.local`.
 
 - Run it from a trusted environment, such as a release pipeline, with the production `DATABASE_URL` supplied by secret management.
-- It needs the full install, including development dependencies, because `drizzle-kit` is a development dependency of `@startup/db`.
+- It needs the full install, including development dependencies, because `drizzle-kit` is a development dependency of `@startup/db` and `tsx` of `@startup/jobs`.
+- No process migrates pg-boss when it starts. A process whose pg-boss schema version differs from the database's refuses to start, so upgrading pg-boss follows its own procedure in `jobs.md`.
 - Apply migrations before the new application version serves traffic.
 - Apply only migrations that are committed, reviewed, and merged to `main`. Do not run `pnpm db:generate` against production, and do not use `drizzle-kit push`.
 - Check which database `DATABASE_URL` points to before running the command. A production URL that is exported in a shell or stored in `.env.local` turns a routine local `pnpm db:migrate` into a production migration. Do not keep production URLs in either place.
@@ -216,7 +217,7 @@ See `continuous-integration.md`.
 
 1. CI is green on the commit being deployed.
 2. New environment variables are set in the deployment platform.
-3. Migrations are reviewed and compatible with the currently deployed version.
+3. Migrations are reviewed and compatible with the currently deployed version. When `pg-boss` changed, follow the upgrade procedure in `jobs.md` instead of steps 4 and 5.
 4. Migrations are applied.
 5. The application is deployed.
 6. The homepage and `/api/auth/ok` respond.

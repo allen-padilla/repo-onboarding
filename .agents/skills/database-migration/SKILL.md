@@ -67,6 +67,12 @@ See `docs/architecture/parallel-development.md`.
    - whether migration succeeded
    - any rollout or data-migration concerns
 
+## pg-boss Schema
+
+The `pgboss` schema belongs to pg-boss (`@startup/jobs`), not to Drizzle. Never describe it in `packages/db/src/schema/`, generate a Drizzle migration for it, or change it by hand.
+
+`pnpm db:migrate` installs and upgrades it after the Drizzle migrations. When a change upgrades `pg-boss`, review the SQL with `pnpm --filter @startup/jobs jobs:plans` before applying it, and report the upgrade procedure in `docs/architecture/jobs.md` as a rollout concern.
+
 ## Safety
 
 Never run destructive database operations against production unless the task explicitly authorizes a reviewed production procedure.

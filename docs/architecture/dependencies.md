@@ -57,7 +57,8 @@ Some dependencies must change together:
 | `react` peer range                 | `packages/ui`, `packages/auth` `peerDependencies` | must include the version `apps/web` installs                 |
 | `next`, `eslint-config-next`       | `apps/web`                                        | same exact version                                           |
 | `@types/react`, `@types/react-dom` | `apps/web`, `packages/ui`                         | same major version as React                                  |
-| `drizzle-orm`                      | `packages/db`, `packages/billing`, `packages/auth` | same specifier                                              |
+| `drizzle-orm`                      | `packages/db`, `packages/billing`, `packages/auth`, `packages/jobs` | same specifier                            |
+| `pg`                               | `packages/db`, and `pg-boss`'s own dependency     | `packages/db`'s range must accept the version `pg-boss` requires, so the workspace has one `pg` and one `drizzle-orm` peer variant |
 | `next`                             | `apps/web`, `packages/auth`                       | same exact version; `packages/auth` peer range must include it |
 | `@types/node`                      | every package that uses it                        | major version matches the Node.js version in `.node-version` |
 
@@ -144,6 +145,7 @@ Some dependencies have a single owning package. Do not import them anywhere else
 - `stripe`: `@startup/billing`
 - `better-auth`: `@startup/auth`
 - `nodemailer`: `@startup/email`
-- `drizzle-orm` and `pg`: `@startup/db`, plus the `@startup/billing` and `@startup/auth` tests. Runtime code that needs raw SQL uses `sql` from `@startup/db`, so it shares that package's `drizzle-orm`.
+- `pg-boss`: `@startup/jobs`, pinned exactly. An upgrade is a schema change (see `jobs.md`).
+- `drizzle-orm` and `pg`: `@startup/db`, plus the `@startup/billing`, `@startup/auth`, and `@startup/jobs` tests. Runtime code that needs raw SQL uses `sql` from `@startup/db`, so it shares that package's `drizzle-orm`.
 
 Use the `add-package` skill when creating or restructuring a workspace package.

@@ -1,0 +1,30 @@
+{
+  "name": "@startup/jobs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/queue.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "jobs:migrate": "tsx src/migrate.ts",
+    "jobs:plans": "tsx src/migrate.ts --plans"
+  },
+  "dependencies": {
+    "@startup/db": "workspace:*",
+    "@startup/env": "workspace:*",
+    "pg-boss": "12.35.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@startup/typescript-config": "workspace:*",
+    "@types/node": "^24",
+    "drizzle-orm": "^0.45.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.0.2"
+  }
+}

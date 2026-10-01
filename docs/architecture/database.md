@@ -79,6 +79,10 @@ Typical flow:
 
 Do not edit generated migrations or their metadata by hand.
 
+### pg-boss Schema
+
+The `pgboss` schema belongs to pg-boss, the job queue in `@startup/jobs`. It is not part of the Drizzle schema, and Drizzle migrations never touch it. `pnpm db:migrate` installs or upgrades it after the Drizzle migrations, through the pinned pg-boss CLI. Review its pending SQL with `pnpm --filter @startup/jobs jobs:plans`. See `jobs.md`.
+
 ## Safety
 
 Generated migrations must be reviewed before application.

@@ -78,6 +78,17 @@ See `docs/architecture/email.md`.
 - Errors, logs, Sentry, and PostHog never receive message bodies, links, or tokens.
 - Tests never open network connections; inject a transport.
 
+## Jobs
+
+See `docs/architecture/jobs.md`.
+
+- Only `@startup/jobs` imports `pg-boss`. Other code uses its exports.
+- Never install or migrate pg-boss from application code. `pnpm db:migrate` does it as a release step.
+- Add a queue to `packages/jobs/src/queues.ts`; never create queues at runtime.
+- Send a job in the same transaction as the rows it refers to, with `inTransaction(tx)`.
+- Job handlers return nothing and throw only errors without processed content or provider messages, because pg-boss stores them.
+- Upgrading `pg-boss` is a schema change: review `jobs:plans` and follow the upgrade procedure.
+
 ## API Routes
 
 - Use the `add-api-route` skill for new or materially changed route handlers.

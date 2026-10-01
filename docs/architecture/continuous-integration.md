@@ -149,11 +149,11 @@ If a future workflow needs a credential, such as a Stripe test-mode key or a Sen
 
 ## Migration Behavior
 
-The E2E job runs `pnpm db:migrate` before the tests. It applies every committed migration in `packages/db/drizzle/`, in order, to the empty service database.
+The E2E job runs `pnpm db:migrate` before the tests. It applies every committed migration in `packages/db/drizzle/`, in order, to the empty service database, then installs pg-boss's schema and creates its queues (`jobs.md`).
 
 This verifies that:
 
-- the committed migrations apply cleanly from an empty database
+- the committed migrations and the pinned pg-boss version apply cleanly from an empty database
 - the application and E2E suite work against the migrated schema
 
 CI does not:

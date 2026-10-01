@@ -27,6 +27,11 @@ updates:
         update-types:
           - minor
           - patch
+        # pg-boss minor releases change its database schema, so each upgrade
+        # gets its own pull request and the release procedure in
+        # docs/architecture/jobs.md.
+        exclude-patterns:
+          - "pg-boss"
 
   - package-ecosystem: github-actions
     directory: /
