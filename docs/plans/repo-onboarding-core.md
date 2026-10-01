@@ -159,7 +159,7 @@ Verification: `pnpm agent:check`.
 
 | File | Change |
 | --- | --- |
-| `packages/github/package.json` etc. (new) | `@startup/github`, entry points `.` (server-only) and `./url` (no imports, browser-safe). Depends on `@startup/env` and `tar-stream`. Dev: `@types/tar-stream`. Tests load the no-network setup file. |
+| `packages/github/package.json` etc. (new) | `@startup/github`, entry points `.` (server-only) and `./url` (no imports, browser-safe). Depends on `@startup/env`, `tar-stream`, and `zod`. Tests load the no-network setup file. |
 | `packages/github/src/url.ts` | `parseRepositoryUrl(input)`: the spec's accepted forms, GitHub's owner and repository name rules, `{ owner, name }` or `null`. |
 | `packages/github/src/client.ts` | `createGitHubClient({ token?, apiUrl?, fetch? })`, defaults from `serverEnv`: `getRepository` (canonical name, description, default branch, visibility; private raises the same error as missing), `getBranchHead` (409 is an empty repository), `getTree` (recursive; `truncated` raises too large), `readFile` (root `.gitattributes`), and `readFiles(sha, paths, { maxDownloadBytes, maxFileBytes, signal })`. |
 | `packages/github/src/archive.ts` | Streams `/tarball/{sha}` through `node:zlib` and `tar-stream`, strips GitHub's top-level directory, keeps only requested paths, and stops past the download cap. |
@@ -380,6 +380,7 @@ Differences from the plan, recorded as each slice lands.
 
 - **Slice 1.** A third check constraint: a repository has a `failure_reason` exactly when its `status` is `failed`. `REPOSITORY_STATUSES` and `FAILURE_REASONS` are exported from the schema for later slices.
 - **Slice 2.** `getJobQueue()` is the producer only. The worker uses `createJobQueue("worker")` and `startJobQueue`. `JobQueueUnavailableError` carries a `reason` and no `cause`, following `@startup/email`'s errors. `@startup/db`'s `pg` range moved to `^8.23.1`, the version pg-boss requires, so the workspace keeps one `pg` and one `drizzle-orm` variant. The heartbeat-cancel test moved to Slice 6.
+- **Slice 3.** `tar-stream` 3 ships its own types, so `@types/tar-stream` is not installed. `@startup/github` also depends on `zod`, to validate GitHub's responses. The branch head comes from `git/ref/heads/{branch}`, which answers `409` for an empty repository. `readFile` returns `null` for a file over its size limit as well as for a missing one. `GitHubUnavailableError` has a `reason`, including `authentication` (a rejected token) and `redirect` (a redirect to another host). `GITHUB_API_TOKEN` must be printable with no spaces. A one-off run against the real API (`octocat/Hello-World`) confirmed the canonical name, the redirect to `codeload.github.com`, and the archive layout.
 
 ## Verification
 

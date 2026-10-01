@@ -68,6 +68,16 @@ See `docs/architecture/decision-models.md`.
 - Only `@startup/decision` calls the TypeSafe API. `TYPESAFE_API_KEY` and `TYPESAFE_MODEL` are server-only.
 - Confidence thresholds are product policy. Keep them in the product code that owns the decision, not in `@startup/decision`.
 
+## GitHub
+
+See `docs/architecture/repository-analysis.md`.
+
+- Only `@startup/github` calls GitHub. Other code uses its client.
+- Never fetch a URL a user submitted; parse it with `parseRepositoryUrl` and request only through the client.
+- Treat a repository that is not public as missing, whatever the token can read.
+- Errors never include the token, headers, response bodies, or GitHub's messages.
+- Tests inject `fetch` and never open network connections.
+
 ## Email
 
 See `docs/architecture/email.md`.

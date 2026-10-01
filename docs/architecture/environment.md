@@ -38,6 +38,8 @@ Both files live in the repository root. The application and the database tooling
 | `EMAIL_FROM`                                                    | no       | server        | sender address; set with `SMTP_URL`           |
 | `TYPESAFE_API_KEY`                                              | no       | server secret | decision models (`@startup/decision`)         |
 | `TYPESAFE_MODEL`                                                | no       | server        | TypeSafe model name                           |
+| `GITHUB_API_TOKEN`                                              | no       | server secret | raises GitHub rate limits; public repositories only |
+| `GITHUB_API_URL`                                                | no       | server        | GitHub API address; tests only                |
 | `NEXT_PUBLIC_SENTRY_DSN`                                        | no       | browser       | enables Sentry                                |
 | `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`, `NEXT_PUBLIC_POSTHOG_HOST` | no       | browser       | enables PostHog when both are set             |
 | `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`             | no       | build only    | Sentry source-map upload                      |

@@ -145,6 +145,7 @@ Some dependencies have a single owning package. Do not import them anywhere else
 - `stripe`: `@startup/billing`
 - `better-auth`: `@startup/auth`
 - `nodemailer`: `@startup/email`
+- `tar-stream`: `@startup/github`
 - `pg-boss`: `@startup/jobs`, pinned exactly. An upgrade is a schema change (see `jobs.md`).
 - `drizzle-orm` and `pg`: `@startup/db`, plus the `@startup/billing`, `@startup/auth`, and `@startup/jobs` tests. Runtime code that needs raw SQL uses `sql` from `@startup/db`, so it shares that package's `drizzle-orm`.
 
