@@ -26,7 +26,7 @@
     "@startup/typescript-config": "workspace:*",
     "@types/node": "^24",
     "drizzle-orm": "^0.45.3",
-    "next": "16.3.6",
+    "next": "16.3.7",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "typescript": "^5",
