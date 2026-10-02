@@ -43,7 +43,7 @@ A dead-letter queue is listed before the queues that use it.
 | `analysis-failed` | Analyses that failed twice, so their repositories can be marked failed. |
 | `onboarding-maintenance` | The hourly maintenance job. |
 
-See `repository-analysis.md` once the analysis exists.
+`apps/worker` runs the handlers for all three. See The Worker in `repository-analysis.md`.
 
 ## Schema and Migrations
 

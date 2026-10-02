@@ -11,6 +11,7 @@ The model avoids depending on one vendor where it does not have to. Where a choi
 | Part          | Production                                                        |
 | ------------- | ----------------------------------------------------------------- |
 | Application   | `apps/web`, on Vercel or any host that runs Next.js on Node.js    |
+| Worker        | `apps/worker`, on a host that runs a long-lived Node.js process   |
 | Database      | managed PostgreSQL                                                |
 | Secrets       | the deployment platform's secret management                       |
 | Verification  | GitHub Actions, before deployment                                 |
@@ -28,6 +29,20 @@ The deployable application is `apps/web`. It is a standard Next.js App Router ap
 - Server code runs on the Node.js runtime. `@startup/db` connects with `pg` over TCP, which the Edge runtime does not support.
 
 The repository has no `Dockerfile` and does not use Next.js `output: "standalone"`. Add them in a dedicated change if you deploy to containers.
+
+## Worker
+
+`apps/worker` (`@startup/worker`) runs repository analyses from the job queue. It is a long-running Node.js process, not a web server: it listens on no port. Serverless platforms such as Vercel cannot run it. Use a host that keeps a process running and restarts it when it exits, such as a container service, a platform's background worker, or a virtual machine with a process manager.
+
+- Install from the repository root, as for the web application: `pnpm install --frozen-lockfile`. No build step is needed.
+- Start it with `pnpm --filter @startup/worker start`. It runs TypeScript through `tsx`, a runtime dependency of the worker, because the workspace packages ship TypeScript source.
+- It needs Node.js 24, and `DATABASE_URL` must reach the same database as the web application.
+- It validates the same required server variables as the web application, `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` included, although it does not use them. Give it the analysis variables too: `GITHUB_API_TOKEN`, `TYPESAFE_*`, and `ANTHROPIC_*`. It reads `NEXT_PUBLIC_SENTRY_DSN` at runtime to report errors.
+- On start it waits for the database and for the pg-boss schema, logging which one it is waiting for and trying again every 5 seconds, then logs `worker ready`. It never migrates anything: run `pnpm db:migrate` first.
+- Each process runs up to 4 analyses at once, and each user's analyses run one at a time across all processes. Add processes for more throughput. Each opens a pg-boss pool and a `@startup/db` pool, so count both against the database's connection limit.
+- **Shutdown.** Stop it with SIGTERM (or SIGINT). It stops claiming jobs, interrupts the analyses it is running, returns their repositories to `queued`, and stops within about 45 seconds. Give the host a shutdown grace period of at least 60 seconds before it kills the process. An interrupted analysis starts over on the next worker, and a second interruption fails it, so a deploy that interrupts the same analysis twice fails it. Avoid restarting the worker in quick succession.
+
+See `repository-analysis.md` for what the worker does and `jobs.md` for the queue.
 
 ## Database
 
@@ -64,6 +79,8 @@ Set these in the deployment platform. `.env.local` is not used in production, an
 | `SENTRY_AUTH_TOKEN`                                             | no       | build           | secret, source-map upload                           |
 
 The production build validates the required server variables through `@startup/env`, so they must exist in the build environment as well as at runtime. The build does not need to reach the database.
+
+The worker reads every server variable above at runtime, including the required ones. It has no build. The billing and email variables are optional for it: it sends neither.
 
 Set `SMTP_URL` and `EMAIL_FROM` together, or leave both empty to disable email. Setting only one fails validation. Both local defaults from `.env.example` must change: a deployment that still points at `smtp://localhost:1025` fails every send with a delivery error.
 
@@ -222,8 +239,8 @@ See `continuous-integration.md`.
 2. New environment variables are set in the deployment platform.
 3. Migrations are reviewed and compatible with the currently deployed version. When `pg-boss` changed, follow the upgrade procedure in `jobs.md` instead of steps 4 and 5.
 4. Migrations are applied.
-5. The application is deployed.
-6. The homepage and `/api/auth/ok` respond.
+5. The application and the worker are deployed. The old worker receives SIGTERM and has its grace period to stop.
+6. The homepage and `/api/auth/ok` respond, and the worker logs `worker ready`.
 7. When billing changed, a Stripe test event reaches the webhook endpoint.
 8. When email changed, a password reset request for a test account delivers a message.
 

@@ -2,7 +2,10 @@
 
 ## Applications
 
-`apps/` contains deployable applications.
+`apps/` contains deployable applications:
+
+- `apps/web` (`@startup/web`): the Next.js application.
+- `apps/worker` (`@startup/worker`): the background worker that runs repository analyses. It depends on `@startup/env`, `@startup/jobs`, and `@startup/onboarding`. See `deployment.md`.
 
 Applications may depend on packages.
 
@@ -31,6 +34,7 @@ packages → apps
 ```mermaid
 flowchart TD
   web["apps/web"]
+  worker["apps/worker"]
   auth["@startup/auth"]
   billing["@startup/billing"]
   ui["@startup/ui"]
@@ -47,6 +51,9 @@ flowchart TD
   web --> billing
   web --> ui
   web --> env
+  worker --> env
+  worker --> jobs
+  worker --> onboarding
   auth --> db
   auth --> email
   auth --> env
@@ -60,7 +67,9 @@ flowchart TD
   jobs --> db
   jobs --> env
   onboarding --> db
+  onboarding --> decision
   onboarding --> email
+  onboarding --> generation
   onboarding --> github
   onboarding --> jobs
 ```
@@ -130,7 +139,7 @@ See `billing.md`.
 
 Bounded AI decisions (classification, routing, scoring, gating) through TypeSafe's System One API: `createDecisionClient`, typed questions and answers, and `Decision*` errors.
 
-Server-only. Depends on `@startup/env`. The only code that calls the TypeSafe API. No application currently depends on it.
+Server-only. Depends on `@startup/env`. The only code that calls the TypeSafe API. `@startup/onboarding` uses it to rank files.
 
 See `decision-models.md`.
 
@@ -146,7 +155,7 @@ See `email.md`.
 
 Open-ended generation with Claude through the Anthropic API: `createGenerationClient`, `generateObject` for structured output, `isGenerationConfigured`, and `Generation*` errors. Product prompts belong to the caller.
 
-Server-only. Owns the `@anthropic-ai/sdk` dependency and is the only code that calls the Anthropic API. Depends on `@startup/env`. No application currently depends on it.
+Server-only. Owns the `@anthropic-ai/sdk` dependency and is the only code that calls the Anthropic API. Depends on `@startup/env`. `@startup/onboarding` uses it to write walkthroughs.
 
 See `generative-models.md`.
 
@@ -157,7 +166,7 @@ Public GitHub repositories through the REST API: repository metadata, branch hea
 - `@startup/github` is server-only. It is the only code that calls GitHub, and it owns the `tar-stream` dependency.
 - `@startup/github/url` exports `parseRepositoryUrl`, the rule for repository URLs that users submit. It is browser-safe and has no imports.
 
-Depends on `@startup/env`. No application currently depends on it.
+Depends on `@startup/env`. `@startup/onboarding` uses it.
 
 See `repository-analysis.md`.
 
@@ -166,16 +175,20 @@ See `repository-analysis.md`.
 Background jobs in PostgreSQL through pg-boss: producer and worker queues, the queue registry (`QUEUES`), sending inside a Drizzle transaction (`inTransaction`), the `jobs:migrate` release step, and `JobQueueUnavailableError`.
 
 - `@startup/jobs` is server-only. It owns the `pg-boss` dependency and is the only code that imports it.
-- `@startup/jobs/testing` exports `createTestJobQueue()` for tests: pg-boss on in-memory PGlite.
+- `@startup/jobs/testing` exports `createTestJobQueue()`, `createTestJobQueueTemplate()`, and `TestClock` for tests: pg-boss on in-memory PGlite.
 
-Depends on `@startup/db` and `@startup/env`. No application currently depends on it.
+Depends on `@startup/db` and `@startup/env`. `apps/worker` and `@startup/onboarding` use it.
 
 See `jobs.md`.
 
 ### @startup/onboarding
 
-The product's repositories: adding, listing, reading, retrying, and deleting them, the per-user limits, and queueing their analyses. `addRepository`, `retryAnalysis`, `deleteRepository`, `listRepositories`, `getRepository`, `getAddStatus`, `RepositoryRequestError`, and `RepositoryNotFoundError`.
+The product's repositories and their analysis.
 
-Server-only. Depends on `@startup/db`, `@startup/email`, `@startup/github`, and `@startup/jobs`. No application currently depends on it.
+- `@startup/onboarding` (server-only): adding, listing, reading, retrying, and deleting repositories, the per-user limits, and queueing their analyses. `addRepository`, `retryAnalysis`, `deleteRepository`, `listRepositories`, `getRepository`, `getAddStatus`, `RepositoryRequestError`, and `RepositoryNotFoundError`.
+- `@startup/onboarding/worker` (server-only): `startAnalysisWorker`, the analysis and its job handlers.
+- `@startup/onboarding/walkthrough`: the stored walkthrough document's schema, `parseWalkthroughDocument`, and `githubUrl`. Imports only `zod`.
+
+Depends on `@startup/db`, `@startup/decision`, `@startup/email`, `@startup/generation`, `@startup/github`, and `@startup/jobs`. `apps/worker` uses `./worker`.
 
 See `repository-analysis.md`.

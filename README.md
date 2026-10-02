@@ -76,6 +76,8 @@ pnpm dev
 
 Open <http://localhost:3000>. Email sent by the application is captured by the local mail catcher, Mailpit, at <http://localhost:8025>.
 
+`pnpm dev` also starts the analysis worker (`apps/worker`), which analyzes repositories in the background and logs `worker ready` once it is connected. It needs no keys: without `TYPESAFE_*`, files are ranked by local signals, and without `ANTHROPIC_*`, the walkthrough is the basic one, a ranked list without prose. Set `GITHUB_API_TOKEN` to go past GitHub's limit of 60 API calls per hour.
+
 The `sed` line writes a freshly generated secret into `.env.local` without printing it. Every other value copied from `.env.example` already works for local development.
 
 To check your setup at any point, run `./scripts/check-environment.sh`. It verifies the Node.js version, pnpm, installed dependencies, the required environment variables, that `SMTP_URL` and `EMAIL_FROM` are set together, and Docker. It changes nothing and never prints a value.
@@ -169,6 +171,7 @@ The pages are deliberately minimal. Products restyle or replace them and keep th
 | Path                         | Contents                                                       |
 | ---------------------------- | -------------------------------------------------------------- |
 | `apps/web`                   | the Next.js application (`@startup/web`)                       |
+| `apps/worker`                | the background worker that analyzes repositories (`@startup/worker`) |
 | `packages/auth`              | Better Auth server and client (`@startup/auth`)                |
 | `packages/billing`           | Stripe integration (`@startup/billing`)                        |
 | `packages/db`                | Drizzle schema and migrations (`@startup/db`)                  |
@@ -189,7 +192,7 @@ Run commands from the repository root.
 
 | Command            | What it does                                                                                     |
 | ------------------ | ------------------------------------------------------------------------------------------------ |
-| `pnpm dev`         | starts the Next.js development server on <http://localhost:3000>                                 |
+| `pnpm dev`         | starts the Next.js development server on <http://localhost:3000> and the analysis worker          |
 | `pnpm db:up`       | starts PostgreSQL (`5432`) and Mailpit (`1025`, `8025`) on `127.0.0.1`, waits until ready        |
 | `pnpm db:down`     | stops and removes the containers; the data volume is kept                                        |
 | `pnpm db:migrate`  | applies the committed migrations in `packages/db/drizzle/`, then installs or upgrades the job queue (pg-boss) and its queues; run it again after pulling changes to either |
