@@ -1,10 +1,11 @@
 // The authentication pages in a browser. See docs/specs/auth-pages.md.
 import { randomUUID } from "node:crypto";
 
-import type { Browser, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
+import { regularBrowserPage } from "./support/browser";
 import { expect, test } from "./support/fixtures";
-import { uniqueAddress, uniqueIp } from "./support/identity";
+import { uniqueAddress } from "./support/identity";
 import { linkPath, messagesTo, waitForMessage } from "./support/mailpit";
 import { observabilityReceived, sampledTrace } from "./support/observability";
 
@@ -30,7 +31,7 @@ async function signUp(page: Page, email: string) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL((url) => url.pathname === "/account");
+  await page.waitForURL((url) => url.pathname === "/repositories");
 }
 
 /** Fills and submits the sign-in form on the current page. */
@@ -52,14 +53,19 @@ test("Get Started opens the sign-up page", async ({ page }) => {
   await expect(page).toHaveURL(/\/sign-up$/);
 });
 
-test("sign-up lands on the account page with the address unverified", async ({ page }) => {
+test("sign-up lands on the repository list, and the account page shows the address unverified", async ({
+  page,
+}) => {
   const email = uniqueAddress();
 
   await signUp(page, email);
+  await expect(page.getByRole("heading", { name: "Repositories", level: 1 })).toBeVisible();
 
+  await page.getByRole("link", { name: "Account", exact: true }).click();
   await expect(page.getByText(email)).toBeVisible();
   await expect(page.getByText("Not verified")).toBeVisible();
   await expect(resendButton(page)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Your repositories" })).toHaveAttribute("href", "/repositories");
 });
 
 test("a verification link confirms the address in the same browser", async ({ page }) => {
@@ -99,6 +105,7 @@ test("resend sends a new verification link that verifies the address", async ({ 
 
   await signUp(page, email);
   await waitForMessage(email, { subject: /confirm/i });
+  await page.goto("/account");
   await resendButton(page).click();
 
   await expect(page.getByText("Verification email sent. Check your inbox.")).toBeVisible();
@@ -169,7 +176,7 @@ test("password reset through the pages sets a new password and ends other sessio
   await expect(visitor.getByText(INVALID_CREDENTIALS)).toBeVisible();
 
   await signIn(visitor, email, NEW_PASSWORD);
-  await visitor.waitForURL((url) => url.pathname === "/account");
+  await visitor.waitForURL((url) => url.pathname === "/repositories");
 
   // The session created at sign-up, before the reset, has ended.
   await page.goto("/account");
@@ -215,6 +222,7 @@ test("a signed-out visit to the account page returns there after sign-in", async
   const email = uniqueAddress();
 
   await signUp(page, email);
+  await page.goto("/account");
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.waitForURL((url) => url.pathname === "/");
 
@@ -232,10 +240,10 @@ test("sign-in follows only safe redirect targets", async ({ page, newVisitor }) 
   await signUp(page, email);
 
   const targets: [string, string][] = [
-    ["https://example.com", "/account"],
-    ["//example.com", "/account"],
-    ["/\\example.com", "/account"],
-    ["%2F%2Fexample.com", "/account"],
+    ["https://example.com", "/repositories"],
+    ["//example.com", "/repositories"],
+    ["/\\example.com", "/repositories"],
+    ["%2F%2Fexample.com", "/repositories"],
     ["/account?x=1", "/account?x=1"],
   ];
 
@@ -246,7 +254,7 @@ test("sign-in follows only safe redirect targets", async ({ page, newVisitor }) 
 
     await visitor.goto(`/sign-in?redirect=${encodeURIComponent(target)}`);
     await signIn(visitor, email);
-    await visitor.waitForURL((url) => url.pathname === "/account");
+    await visitor.waitForURL((url) => url.pathname !== "/sign-in");
 
     expect(location(visitor), `redirect=${target}`).toBe(expected);
   }
@@ -257,7 +265,7 @@ test("signed-in visitors skip the sign-in and sign-up pages", async ({ page }) =
 
   for (const path of ["/sign-in", "/sign-up"]) {
     await page.goto(path);
-    expect(location(page), path).toBe("/account");
+    expect(location(page), path).toBe("/repositories");
   }
 });
 
@@ -307,6 +315,7 @@ test("a wrong password and an unknown address get the same message", async ({ pa
 
 test("sign-out returns to the landing page and ends the session", async ({ page }) => {
   await signUp(page, uniqueAddress());
+  await page.goto("/account");
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.waitForURL((url) => url.pathname === "/");
 
@@ -338,6 +347,7 @@ test("the reset page shows a message and sends nothing when email is unavailable
 
 test("resend shows a message when email is unavailable", async ({ page }) => {
   await signUp(page, uniqueAddress());
+  await page.goto("/account");
   await page.route("**/api/auth/send-verification-email", (route) =>
     route.fulfill({
       status: 503,
@@ -348,29 +358,6 @@ test("resend shows a message when email is unavailable", async ({ page }) => {
 
   await expect(page.getByRole("main").getByRole("alert")).toHaveText("Email isn't available right now.");
 });
-
-// PostHog drops events from browsers it considers bots, which includes every
-// automated browser. This page presents as a regular one, so the test sees
-// what PostHog would send.
-async function regularBrowserPage(browser: Browser, baseURL: string | undefined) {
-  const probe = await browser.newPage();
-  const userAgent = (await probe.evaluate(() => navigator.userAgent)).replace("HeadlessChrome", "Chrome");
-
-  await probe.close();
-
-  const context = await browser.newContext({
-    baseURL,
-    userAgent,
-    extraHTTPHeaders: { "x-forwarded-for": uniqueIp() },
-  });
-
-  await context.addInitScript(() => {
-    Object.defineProperty(Navigator.prototype, "webdriver", { get: () => false });
-    Object.defineProperty(Navigator.prototype, "userAgentData", { get: () => undefined });
-  });
-
-  return { context, page: await context.newPage() };
-}
 
 test("the reset page's token never reaches PostHog or Sentry, and the page sends no referrer", async ({
   browser,

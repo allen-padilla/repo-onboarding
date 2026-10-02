@@ -34,7 +34,7 @@ These are already decided. Change them here before planning, not during implemen
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Name on sign-up                  | Required "Name" field                                                                                                                                 | The `user.name` column and Better Auth both require it, and profile editing is out of scope, so a derived name could not be corrected.                          |
 | Sign-up with an existing address | Says the account already exists and links to sign-in and password reset                                                                               | The sign-up API already answers `422 USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL`. Hiding it needs an auth configuration change (no auto sign-in, or required verification). See Security. |
-| Redirect after sign-in           | `?redirect=` query parameter, default `/account`. Unsafe values fall back to the default without an error. Sign-up honors it the same way.            | One rule for every entry point. A silent fallback gives an attacker nothing to probe.                                                                           |
+| Redirect after sign-in           | `?redirect=` query parameter, default `/repositories` (it was `/account` until `repo-onboarding-core.md`). Unsafe values fall back to the default without an error. Sign-up honors it the same way. | One rule for every entry point. A silent fallback gives an attacker nothing to probe.                                                                           |
 | Signed-in visitors               | `/sign-in` and `/sign-up` send them on to their redirect target. `/forgot-password` and `/reset-password` stay open.                                  | A signed-in user has nothing to do on the first two. A reset ends every session anyway.                                                                          |
 | After a password reset           | `/sign-in` with a "password changed" message                                                                                                          | A reset ends every session for the account, so the user is signed out.                                                                                          |
 | Verification outcome             | Carried through the sign-in redirect and shown on `/account` after sign-in. "Verified" is shown only when the address is actually verified.           | Sign-in after verification is off, so a link opened in another browser lands signed out. A query parameter alone must not claim a verification that did not happen. |
@@ -63,8 +63,8 @@ These are already decided. Change them here before planning, not during implemen
 
 - `/sign-in` and `/sign-up` read an optional `redirect` query parameter.
 - It is accepted only as a relative path on the application's own origin: it starts with a single `/`, and resolving it against the application's origin leaves the origin unchanged.
-- Anything else falls back to `/account` without an error. That includes absolute URLs (`https://…`), protocol-relative URLs (`//host`), backslash forms (`/\host`, `\\host`), percent-encoded forms of these, values without a leading `/`, `javascript:` and other schemes, and values containing control characters.
-- A target that is itself `/sign-in` or `/sign-up` also falls back to `/account`, so redirects cannot loop.
+- Anything else falls back to `/repositories` without an error. That includes absolute URLs (`https://…`), protocol-relative URLs (`//host`), backslash forms (`/\host`, `\\host`), percent-encoded forms of these, values without a leading `/`, `javascript:` and other schemes, and values containing control characters.
+- A target that is itself `/sign-in` or `/sign-up` also falls back to `/repositories`, so redirects cannot loop.
 - The path, query, and fragment of an accepted target are kept.
 
 ### Sign-Up (`/sign-up`)
@@ -112,6 +112,7 @@ These are already decided. Change them here before planning, not during implemen
   - the email address
   - whether it is verified
   - when it is not verified, a "Resend verification email" action
+  - a link to `/repositories`
   - a "Sign out" button
 - Resend sends a new verification link whose destination is `/account`. On success, the page says "Verification email sent. Check your inbox." The action is not shown once the address is verified.
 
@@ -138,7 +139,7 @@ These are already decided. Change them here before planning, not during implemen
 
 ### Landing Page
 
-- "Get Started" is a link to `/sign-up`, styled as a primary button. A signed-in visitor who follows it lands on `/account` (see Sign-Up).
+- "Get Started" is a link to `/sign-up`, styled as a primary button. A signed-in visitor who follows it lands on `/repositories` (see Sign-Up).
 
 ## Edge Cases
 
@@ -150,7 +151,7 @@ These are already decided. Change them here before planning, not during implemen
 - **A crafted `/account` URL that claims verification.** No confirmation is shown unless the address is verified.
 - **Email not configured.** Sign-up and sign-in work, and no verification email is sent. `/forgot-password` and the resend action show "Email isn't available right now." for every address.
 - **Rate limits.** The per-address limit counts requests for unknown addresses too, so a `429` on `/forgot-password` does not reveal whether an account exists.
-- **Nested redirects**, such as `/sign-in?redirect=/sign-in?redirect=…`. Auth-page targets fall back to `/account`, so there is no loop.
+- **Nested redirects**, such as `/sign-in?redirect=/sign-in?redirect=…`. Auth-page targets fall back to `/repositories`, so there is no loop.
 - **A session revoked elsewhere**, for example by a password reset in another browser. The next request to `/account` redirects to `/sign-in`.
 - **JavaScript disabled.** Not supported. The forms need the browser auth client.
 
@@ -179,7 +180,7 @@ These are already decided. Change them here before planning, not during implemen
 Browser tests in `tests/e2e/` against the production-mode E2E server. Email steps read delivered messages from Mailpit through `tests/e2e/support/mailpit.ts`. Each test uses its own address and its own `x-forwarded-for` client IP. Rate limits are not raised.
 
 - [ ] The landing page's "Get Started" link opens `/sign-up`.
-- [ ] Sign-up through `/sign-up` with a name, email, and password lands on `/account`. The page shows the address, shows it as not verified, and offers "Resend verification email".
+- [ ] Sign-up through `/sign-up` with a name, email, and password lands on `/repositories`. `/account` then shows the address, shows it as not verified, and offers "Resend verification email".
 - [ ] Verification, same browser: after sign-up, the test reads the verification message from Mailpit and opens its link in the browser. It lands on `/account`, which shows the confirmation and the address as verified, with no resend action.
 - [ ] Verification, signed out: the test opens the link from Mailpit in a new browser context with no session. It is redirected to `/sign-in`, signs in, and lands on `/account` with the confirmation and the address verified.
 - [ ] Resend: clicking "Resend verification email" on `/account` shows the sent message, and a second verification message arrives in Mailpit. Following the newer link verifies the address.
@@ -188,14 +189,14 @@ Browser tests in `tests/e2e/` against the production-mode E2E server. Email step
   - A user signs up in one browser context. In a second context, the test submits their address on `/forgot-password` and sees the generic message.
   - The test reads the reset message from Mailpit and opens its link. It lands on `/reset-password`, and the address bar no longer contains the token.
   - Setting a new password goes to `/sign-in` with the "password changed" message.
-  - Signing in with the new password lands on `/account`. The old password shows "Invalid email or password."
+  - Signing in with the new password lands on `/repositories`. The old password shows "Invalid email or password."
   - In the first context, the session created at sign-up has ended, and `/account` redirects to `/sign-in`.
 - [ ] Reopening a reset link that was already used shows the invalid-link message with a link to `/forgot-password`.
 - [ ] Mismatched new and confirm passwords on `/reset-password` show an error, and the password is unchanged.
 - [ ] `/forgot-password` for an address without an account shows exactly the same message as for an existing account, and no message to that address arrives in Mailpit once the known address's message has arrived.
 - [ ] A signed-out visit to `/account` redirects to `/sign-in?redirect=%2Faccount`. Signing in returns to `/account`.
-- [ ] Unsafe redirect targets on `/sign-in` land on `/account` after sign-in. The cases are `https://example.com`, `//example.com`, `/\example.com`, and a percent-encoded `//example.com`. A safe target such as `/account?x=1` is followed.
-- [ ] A signed-in visit to `/sign-in` or `/sign-up` goes to `/account`.
+- [ ] Unsafe redirect targets on `/sign-in` land on `/repositories` after sign-in. The cases are `https://example.com`, `//example.com`, `/\example.com`, and a percent-encoded `//example.com`. A safe target such as `/account?x=1` is followed.
+- [ ] A signed-in visit to `/sign-in` or `/sign-up` goes to `/repositories`.
 - [ ] Sign-up with an address that already has an account shows the "already exists" message with links to sign in and reset the password.
 - [ ] Sign-in with a wrong password and sign-in with an unknown address show the same message.
 - [ ] "Sign out" on `/account` lands on `/`, and `/account` then redirects to `/sign-in`.

@@ -12,6 +12,8 @@ const PORT = 9999;
 // a Sentry envelope or a batch of PostHog events.
 const received: string[] = [];
 
+const POSTHOG_CONFIG = JSON.stringify({ autocapture_opt_out: false });
+
 const cors = {
   "access-control-allow-origin": "*",
   "access-control-allow-headers": "*",
@@ -41,9 +43,21 @@ createServer((request, response) => {
   }
 
   if (request.method === "GET") {
+    // PostHog's remote configuration, as a script or as JSON. It turns
+    // autocapture on, as in a project that uses it: without it, autocapture
+    // stays off, and tests could not see what it would send.
+    const config = /^\/array\/([^/]+)\/config(\.js)?$/.exec(new URL(request.url ?? "/", "http://stub").pathname);
+
+    if (config?.[2]) {
+      const script = `(window._POSTHOG_REMOTE_CONFIG ||= {})[${JSON.stringify(config[1])}] = { config: ${POSTHOG_CONFIG}, siteApps: [] };`;
+
+      response.writeHead(200, { ...cors, "content-type": "application/javascript" }).end(script);
+      return;
+    }
+
     // `/received` is for tests. Anything else is a client loading
     // configuration, which an empty object satisfies.
-    const body = request.url === "/received" ? JSON.stringify(received) : "{}";
+    const body = request.url === "/received" ? JSON.stringify(received) : config ? POSTHOG_CONFIG : "{}";
 
     response.writeHead(200, { ...cors, "content-type": "application/json" }).end(body);
     return;

@@ -217,7 +217,7 @@ The basic walkthrough says that no writing model is configured on this server, s
 ## Security and Privacy
 
 - **Ownership.** Every page, route, and query is filtered by the signed-in owner, read with `getSession()`. Another user's repository is indistinguishable from one that does not exist.
-- **No user-supplied URLs are fetched.** The server parses the owner and name out of the submitted URL, checks them against GitHub's naming rules, and builds every request itself. The application only contacts GitHub, TypeSafe, and Anthropic.
+- **No user-supplied URLs are fetched.** The server parses the owner and name out of the submitted URL, checks them against GitHub's naming rules, and builds every request itself. Analysis code only contacts GitHub, TypeSafe, and Anthropic.
 - **Public repositories only.** The server checks visibility through GitHub when a repository is added or retried, and again when each analysis starts. It rejects private repositories even when the configured token could read them.
 - **Untrusted content.** File contents, paths, names, and the description are untrusted input to both models and to the page. The walkthrough is rendered as escaped text with headings, paragraphs, lists, inline code, and links. It never renders raw HTML, scripts, or images. Every link is checked to point at `https://github.com/<owner>/<repo>/blob/<commit>/<path>` or `.../tree/<commit>/<path>`, for a path that is in the analysis.
 - **Secrets.** `ANTHROPIC_API_KEY`, `TYPESAFE_API_KEY`, and `GITHUB_API_TOKEN` are server-only, never use the `NEXT_PUBLIC_` prefix, and never appear in the browser bundle, logs, or error messages.

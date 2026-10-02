@@ -38,6 +38,14 @@ Keep tokens in URLs out of analytics. The password reset page (`/reset-password?
 
 A new page that receives a token in its URL needs the same treatment: add it to the removal in `instrumentation-client.ts`, and to `scrubAuthTokens` if the token is in the path.
 
+Keep repository content out of analytics. The repository pages show repository names, file paths, and walkthrough text, which autocapture would record as the text and `href` of a clicked link, and session replay as the page itself:
+
+- Their layout (`apps/web/src/app/repositories/layout.tsx`) wraps both pages in `ph-no-capture`. Autocapture skips everything inside it, and session replay blocks it.
+- Their titles are "Repositories" and "Repository", never a repository's name, and their URLs carry only the repository's ID.
+- An E2E test (`tests/e2e/repositories.spec.ts`) clicks the walkthrough's links as a regular browser and checks that PostHog receives no paths or repository names, and that neither PostHog nor Sentry receives file contents or walkthrough text.
+
+Sentry's server spans, when sampled, can name a repository in the URL of a GitHub request. They never carry file contents: the web app reads none.
+
 ## Implementation
 
 Observability is initialized in `apps/web`, and error reporting also in `apps/worker` (see Worker below):

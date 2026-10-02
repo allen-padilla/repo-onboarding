@@ -73,7 +73,7 @@ Follow the normal implementation workflow in `.agents/commands/implement.md`:
 2. `pnpm verify`
 3. `pnpm verify:full` when the canonical policy in `AGENTS.md` requires it
 
-`pnpm verify` can run in several worktrees at once. `pnpm test:e2e` and `pnpm verify:full` use port `3000` and the shared database, so only one worktree may run them at a time. If port `3000` is in use, report it. Do not stop another worktree's server.
+`pnpm verify` can run in several worktrees at once. `pnpm test:e2e` and `pnpm verify:full` use ports `3000`, `9998`, and `9999`, the shared database, and an analysis worker, so only one worktree may run them at a time, and no `pnpm dev` worker may run alongside. If a port is in use, or another worktree runs `pnpm dev`, report it. Do not stop another worktree's server.
 
 ## Completion
 

@@ -24,6 +24,10 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
 
+  // pg-boss is loaded by Node at runtime, not bundled. It reaches the web app
+  // through @startup/jobs, which sends analysis jobs.
+  serverExternalPackages: ["pg-boss"],
+
   // When two rules set the same header, the later one wins.
   async headers() {
     return [

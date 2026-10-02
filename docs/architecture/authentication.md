@@ -44,7 +44,7 @@ Server components, server actions, and route handlers read the session with `get
 | `/sign-in`         | Email and password. One message for every failed sign-in. |
 | `/forgot-password` | Requests a reset link. The same message for every address. |
 | `/reset-password`  | Receives the reset link's token and sets a new password. See observability.md for how the token is kept out of analytics. |
-| `/account`         | Protected. The address, its verification state, resending the verification email, and sign-out. |
+| `/account`         | Protected. The address, its verification state, resending the verification email, a link to `/repositories`, and sign-out. |
 
 Verification links land on `/account?verified=1` (`VERIFY_CALLBACK` in `apps/web/src/lib/auth.ts`). The page shows a confirmation only when the address is actually verified, and the invalid-link message when Better Auth adds `error`. A signed-out visitor to `/account` goes to `/sign-in` with the page's query kept as the redirect target, so the outcome survives signing in. The pages show their own copy for each error code and never the server's message.
 
@@ -89,7 +89,7 @@ The page that receives a reset token has the token in its URL. Keep it out of an
 
 Reset and verification links redirect only to the `BETTER_AUTH_URL` origin or a relative path. The template configures no `trustedOrigins`; leave `BETTER_AUTH_TRUSTED_ORIGINS` unset. Better Auth skips origin checks when `NODE_ENV` is `test`, so tests of redirects set `advanced.disableOriginCheck: false`.
 
-Pages that send a visitor on after sign-in or sign-up take the target from a `redirect` query parameter and pass it through `safeRedirectPath` from `@startup/auth/redirect`. It follows only a path on the application's own origin, keeping its query and fragment, and falls back to `/account` without an error for anything else: absolute and protocol-relative URLs, backslashes, percent-encoded forms of these, control characters, and the sign-in and sign-up pages themselves. It runs in server and browser code.
+Pages that send a visitor on after sign-in or sign-up take the target from a `redirect` query parameter and pass it through `safeRedirectPath` from `@startup/auth/redirect`. It follows only a path on the application's own origin, keeping its query and fragment, and falls back to `DEFAULT_REDIRECT`, `/repositories`, without an error for anything else: absolute and protocol-relative URLs, backslashes, percent-encoded forms of these, control characters, and the sign-in and sign-up pages themselves. It runs in server and browser code.
 
 ### Rate Limits
 

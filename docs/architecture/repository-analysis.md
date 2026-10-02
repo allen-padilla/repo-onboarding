@@ -4,7 +4,7 @@
 
 A user adds a public GitHub repository, and a background analysis ranks its files and writes a walkthrough. See `docs/specs/repo-onboarding-core.md` for the behavior and `docs/plans/repo-onboarding-core.md` for how it is being built.
 
-This document covers repositories and limits, the analysis, the worker that runs it, and GitHub access. The pages and routes are still to come. The job queue the analysis runs on is described in `jobs.md`.
+This document covers repositories and limits, the pages and routes, the analysis, the worker that runs it, and GitHub access. The job queue the analysis runs on is described in `jobs.md`.
 
 ## Repositories and Limits
 
@@ -31,11 +31,43 @@ Windows are measured with the database's `now()`.
 
 Locking the user's row makes one user's requests check and save one at a time, so two requests cannot both take the last slot, and two adds of the same repository create one. Retry accepts only a failed analysis and keeps its slot. It clears the old results, and records a new job ID and the latest commit.
 
-Every rejection raises `RepositoryRequestError` with a `code`: `INVALID_URL`, `REPOSITORY_NOT_FOUND`, `REPOSITORY_EMPTY`, `REPOSITORY_LIMIT`, `DAILY_LIMIT`, `REQUEST_LIMIT`, `VERIFICATION_REQUIRED`, `GITHUB_UNAVAILABLE`, `QUEUE_UNAVAILABLE`, or `NOT_RETRYABLE`. Routes map the code to a status and a message.
+Every rejection raises `RepositoryRequestError` with a `code`: `INVALID_URL`, `REPOSITORY_NOT_FOUND`, `REPOSITORY_EMPTY`, `REPOSITORY_LIMIT`, `DAILY_LIMIT`, `REQUEST_LIMIT`, `VERIFICATION_REQUIRED`, `GITHUB_UNAVAILABLE`, `QUEUE_UNAVAILABLE`, or `NOT_RETRYABLE`. Routes map the code to a status, and pages to their own message (see Pages and Routes).
 
 ### Deleting
 
 Deleting removes the repository, its analysis, and its walkthrough, and cancels its job in the same transaction. A running analysis notices at its next heartbeat. When the job queue is unavailable, the repository is still deleted: a job whose repository is gone does nothing when it runs.
+
+## Pages and Routes
+
+`apps/web` authenticates, checks the request, calls `@startup/onboarding`, and maps the result to HTTP. The rules stay in the package.
+
+| Route | What it does |
+| --- | --- |
+| `/repositories` | The user's repositories, newest first, with status, date added, and the analyzed commit once done; the slots used; and the add form, or why adding is unavailable, with a link to `/account` for verification. |
+| `/repositories/[id]` | Status and failure reason, links to the repository and the analyzed commit on GitHub, dates, coverage counts, the walkthrough once done, retry when failed, and delete after a confirmation. |
+| `POST /api/repositories` | `{ url }`. `201 { id }` for a new repository, `200 { id }` for one the user already has. |
+| `POST /api/repositories/[id]/retry` | `200 { id }`. |
+| `DELETE /api/repositories/[id]` | `204`. |
+
+After sign-in and sign-up, users land on `/repositories` (`DEFAULT_REDIRECT` in `@startup/auth/redirect`). Each page checks the session itself and sends a signed-out visitor to `/sign-in` with the page as the redirect target: a layout does not know which page it wraps. A missing repository, another user's, and a malformed ID all call `notFound()`. The repository page has no `loading.tsx`, since `notFound()` answers `404` only for a response that has not started streaming. While a repository is queued or running, both pages call `router.refresh()` every 3 seconds, so statuses change without a reload.
+
+The add form checks the URL with `@startup/github/url` before sending it, and the server checks it again. Pages show their own copy for each error code and for each failure reason (`apps/web/src/lib/repositories.ts`), never a message from the server, GitHub, or a model provider.
+
+Every route answers `401 UNAUTHORIZED` without a session, and `403 FORBIDDEN_ORIGIN` when the `Origin` header is not `BETTER_AUTH_URL`'s origin (`apps/web/src/lib/same-origin.ts`): route handlers do not get the check that Server Actions get, and browsers send `Origin` with every `POST` and `DELETE`. Bodies are `{ error: <code> }`:
+
+| Code | Status |
+| --- | --- |
+| `INVALID_URL` | 400 |
+| `VERIFICATION_REQUIRED`, `FORBIDDEN_ORIGIN` | 403 |
+| `NOT_FOUND` (missing, another user's, or a malformed ID) | 404 |
+| `REPOSITORY_LIMIT`, `NOT_RETRYABLE` | 409 |
+| `REPOSITORY_NOT_FOUND`, `REPOSITORY_EMPTY` | 422 |
+| `DAILY_LIMIT`, `REQUEST_LIMIT` | 429 |
+| `GITHUB_UNAVAILABLE`, `QUEUE_UNAVAILABLE` | 503 |
+
+Other errors are thrown, so Next.js answers `500` and reports them. Node loads pg-boss at runtime in the web app (`serverExternalPackages` in `next.config.ts`), rather than the build bundling it.
+
+The walkthrough is rendered from the parsed document as React text, `<code>`, and links built with `githubUrl` (`apps/web/src/app/repositories/[id]/walkthrough.tsx`). Nothing renders HTML from it, and a path that `githubUrl` refuses is shown as text, not a link. Both pages sit inside `ph-no-capture`, and their titles never name a repository (`observability.md`). A page that fails, during a refresh too, shows `error.tsx` inside the same layout, with a button that tries again.
 
 ## Analysis
 
@@ -121,7 +153,7 @@ After an analysis ends, successfully or not, the database holds paths, counts, r
 
 ### Testing the Analysis
 
-`@startup/onboarding`'s tests run on in-memory PGlite with pg-boss (`@startup/jobs/testing`), drive time with pg-boss's `TestClock`, and use a fake GitHub client (`src/testing/github.ts`) whose fixture files carry a marker string. `worker.test.ts` runs jobs through pg-boss and checks every table, the `pgboss` schema included, for the marker after runs that succeed and fail. PGlite has one connection, so two workers claiming at once is left to the end-to-end tests.
+`@startup/onboarding`'s tests run on in-memory PGlite with pg-boss (`@startup/jobs/testing`), drive time with pg-boss's `TestClock`, and use a fake GitHub client (`src/testing/github.ts`) whose fixture files carry a marker string. `worker.test.ts` runs jobs through pg-boss and checks every table, the `pgboss` schema included, for the marker after runs that succeed and fail. PGlite has one connection, so concurrent claims meet real Postgres only in the end-to-end tests (`testing.md`), where one worker takes up to 4 jobs at once.
 
 ### Time Budget
 

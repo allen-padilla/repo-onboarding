@@ -5,7 +5,7 @@
 //
 // Browser-safe: this module has no imports.
 
-export const DEFAULT_REDIRECT = "/account";
+export const DEFAULT_REDIRECT = "/repositories";
 
 // Any origin works here: the check is whether resolving a path changes it.
 const BASE = "http://redirect.invalid";

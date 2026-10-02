@@ -18,6 +18,7 @@ Existing examples:
 - `apps/web/src/app/api/auth/[...all]/route.ts` — Better Auth handler, re-exported from `@startup/auth/next`
 - `apps/web/src/app/api/billing/checkout/route.ts` — authenticated endpoint that delegates to `@startup/billing`
 - `apps/web/src/app/api/billing/webhook/route.ts` — signed Stripe webhook that verifies the raw body
+- `apps/web/src/app/api/repositories/route.ts` and `[id]/` — authenticated, state-changing routes that check `Origin` and map a package's error codes to statuses (`apps/web/src/lib/repository-routes.ts`)
 
 Domain logic belongs in the owning `@startup/*` package, exposed through that package's public entry point. Route handlers are thin HTTP adapters.
 
@@ -32,6 +33,7 @@ Domain logic belongs in the owning `@startup/*` package, exposed through that pa
      `@startup/auth/next`. It reads the request headers itself and returns the
      session or `null`.
    - Return `401` when there is no session.
+   - A route that uses the session cookie to change state also checks `isSameOrigin(request)` from `apps/web/src/lib/same-origin.ts`, and returns `403` when it fails. Route handlers do not get the `Origin` check that Server Actions get, and Better Auth's covers only its own routes. Tests that call such a route directly send an `Origin` header.
    - Do not create parallel authentication, session parsing, or cookie handling.
 
 4. Decide where the logic lives.

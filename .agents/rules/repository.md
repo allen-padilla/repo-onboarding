@@ -177,6 +177,6 @@ Follow the `worktree-task` skill. See `docs/architecture/parallel-development.md
 - If two active tasks require the same files or schema, report the overlap instead of racing.
 - Only one active task may own schema and migration changes at a time.
 - `package.json` files and `pnpm-lock.yaml` are shared dependency hotspots. Regenerate the lockfile with `pnpm install` rather than hand-merging it.
-- With the current local infrastructure, database migrations and E2E runs (`pnpm test:e2e`, `pnpm verify:full`) are serialized across worktrees: they share the local database and port `3000`.
+- With the current local infrastructure, database migrations and E2E runs (`pnpm test:e2e`, `pnpm verify:full`) are serialized across worktrees: they share the local database and ports `3000`, `9998`, and `9999`. E2E runs also start an analysis worker, so no `pnpm dev` worker may run alongside them.
 - Do not merge another feature branch into your task branch unless explicitly instructed.
 - Integration happens through the normal PR workflow. Do not commit or merge unless explicitly requested.
