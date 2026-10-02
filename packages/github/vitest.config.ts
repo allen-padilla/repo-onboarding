@@ -11,6 +11,8 @@ export default defineConfig({
       BETTER_AUTH_URL: "http://localhost:3000",
       SMTP_URL: "",
       EMAIL_FROM: "",
+      ANTHROPIC_API_KEY: "",
+      ANTHROPIC_MODEL: "",
       GITHUB_API_TOKEN: "",
       GITHUB_API_URL: "",
     },

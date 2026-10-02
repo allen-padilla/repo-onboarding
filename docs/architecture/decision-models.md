@@ -12,7 +12,7 @@ It is not a generative model layer. It does not produce prose, chat replies, cod
 | ------------------------------------------------------------------ | ------------------------------ |
 | Expressible reliably in code (a status check, a threshold, a rule) | deterministic application code |
 | Fuzzy but bounded: a fixed set of answers or an ordered rubric     | `@startup/decision`            |
-| Open-ended: reasoning, prose, code, explanations, free-form output | a generative model             |
+| Open-ended: reasoning, prose, code, explanations, free-form output | a generative model: `@startup/generation` (`generative-models.md`) |
 
 Generative models reason and generate open-ended output. Decision (System One) models classify, route, score, and gate, and return a probability or a distribution instead of text.
 

@@ -2,7 +2,16 @@ import { z } from "zod";
 
 import { emailFrom, smtpUrl } from "./email";
 import { githubApiToken, githubApiUrl } from "./github";
+import { printableToken } from "./printable";
 import { optional } from "./optional";
+
+// Optional integrations that need two values: setting one without the other
+// is an error, so a half-configured integration fails at startup instead of
+// silently staying disabled.
+const PAIRS = [
+  ["SMTP_URL", "EMAIL_FROM", "email"],
+  ["ANTHROPIC_API_KEY", "ANTHROPIC_MODEL", "the writing model"],
+] as const;
 
 export const serverSchema = z
   .object({
@@ -35,23 +44,24 @@ export const serverSchema = z
     // the API URL to https://api.github.com; only tests change it.
     GITHUB_API_TOKEN: optional(githubApiToken),
     GITHUB_API_URL: optional(githubApiUrl),
+
+    // The writing model is disabled when both are empty. Setting only one is
+    // an error. @startup/generation raises a configuration error when it is
+    // called while disabled.
+    ANTHROPIC_API_KEY: optional(printableToken),
+    ANTHROPIC_MODEL: optional(printableToken),
   })
   .superRefine((env, ctx) => {
-    const missing = env.SMTP_URL
-      ? env.EMAIL_FROM
-        ? undefined
-        : "EMAIL_FROM"
-      : env.EMAIL_FROM
-        ? "SMTP_URL"
-        : undefined;
+    for (const [first, second, feature] of PAIRS) {
+      const missing = env[first] ? (env[second] ? undefined : second) : env[second] ? first : undefined;
+      if (!missing) continue;
 
-    if (missing) {
       ctx.addIssue({
         code: "custom",
         path: [missing],
         message: `${missing} is required when ${
-          missing === "SMTP_URL" ? "EMAIL_FROM" : "SMTP_URL"
-        } is set. Set both to enable email, or leave both empty.`,
+          missing === first ? second : first
+        } is set. Set both to enable ${feature}, or leave both empty.`,
       });
     }
   });
@@ -70,4 +80,6 @@ export const serverEnv = serverSchema.parse({
   EMAIL_FROM: process.env.EMAIL_FROM,
   GITHUB_API_TOKEN: process.env.GITHUB_API_TOKEN,
   GITHUB_API_URL: process.env.GITHUB_API_URL,
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+  ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL,
 });

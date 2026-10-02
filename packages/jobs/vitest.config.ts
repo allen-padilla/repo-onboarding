@@ -10,6 +10,8 @@ export default defineConfig({
       BETTER_AUTH_URL: "http://localhost:3000",
       SMTP_URL: "",
       EMAIL_FROM: "",
+      ANTHROPIC_API_KEY: "",
+      ANTHROPIC_MODEL: "",
     },
     setupFiles: ["./src/testing/no-network.ts"],
     // Each test starts PGlite, applies the migrations, installs pg-boss, and

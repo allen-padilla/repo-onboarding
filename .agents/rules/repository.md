@@ -68,6 +68,17 @@ See `docs/architecture/decision-models.md`.
 - Only `@startup/decision` calls the TypeSafe API. `TYPESAFE_API_KEY` and `TYPESAFE_MODEL` are server-only.
 - Confidence thresholds are product policy. Keep them in the product code that owns the decision, not in `@startup/decision`.
 
+## Generative Models
+
+See `docs/architecture/generative-models.md`.
+
+- Only `@startup/generation` calls the Anthropic API or imports `@anthropic-ai/sdk`.
+- `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` are server-only and set together or both left empty.
+- The model is configuration. Do not hard-code a model name in code.
+- Product prompts live in the product code that uses them. Treat content sent to the model as data, never as instructions.
+- Errors, logs, Sentry, and PostHog never receive prompts, the content sent, or model output.
+- Tests inject `fetch` and never call Anthropic.
+
 ## GitHub
 
 See `docs/architecture/repository-analysis.md`.

@@ -52,6 +52,7 @@ These have working local defaults, or are left to each product. Each needs a rea
 - [ ] **Stripe webhook endpoint**: `https://<your-domain>/api/billing/webhook`, with its signing secret in `STRIPE_WEBHOOK_SECRET`.
 - [ ] **Stripe API key**: `STRIPE_SECRET_KEY`. Use test-mode keys everywhere except production.
 - [ ] **Sentry organization and project**: `NEXT_PUBLIC_SENTRY_DSN`, and `SENTRY_ORG`, `SENTRY_PROJECT`, and `SENTRY_AUTH_TOKEN` for source maps.
+- [ ] **Writing model**: `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` (`claude-opus-5-5` recommended). Without them, walkthroughs have no written explanations. Set a spending limit for the key in the Claude Console. See `docs/architecture/generative-models.md`.
 - [ ] **GitHub token**: `GITHUB_API_TOKEN`, a fine-grained token with read-only access to public repositories only. Without one, the server shares GitHub's limit of 60 API calls per hour, about 10 repository analyses. See `docs/architecture/repository-analysis.md`.
 - [ ] **SMTP provider**: `SMTP_URL` for a hosted provider, Amazon SES, or your own relay. Never the local Mailpit. See `docs/architecture/email.md`.
 - [ ] **Sender domain verification**: SPF and DKIM records for the domain in `EMAIL_FROM`, plus a DMARC policy. Without them, providers reject messages or deliver them as spam.

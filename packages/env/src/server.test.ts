@@ -154,3 +154,46 @@ describe("GitHub configuration", () => {
     }
   });
 });
+
+describe("writing model configuration", () => {
+  function parseModel(model: { ANTHROPIC_API_KEY?: string; ANTHROPIC_MODEL?: string }) {
+    return serverSchema.safeParse({ ...required, ...model });
+  }
+
+  it("is disabled when both variables are empty or unset", () => {
+    for (const model of [{}, { ANTHROPIC_API_KEY: "", ANTHROPIC_MODEL: "" }]) {
+      const result = parseModel(model);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.ANTHROPIC_API_KEY).toBeUndefined();
+      expect(result.data?.ANTHROPIC_MODEL).toBeUndefined();
+    }
+  });
+
+  it("accepts a key and a model together", () => {
+    expect(parseModel({ ANTHROPIC_API_KEY: "sk-ant-test-key", ANTHROPIC_MODEL: "claude-opus-5-5" }).success).toBe(true);
+  });
+
+  it("rejects one variable without the other, naming the missing one and never the key", () => {
+    const withoutModel = parseModel({ ANTHROPIC_API_KEY: "sk-ant-s3cret-key" });
+    const withoutKey = parseModel({ ANTHROPIC_MODEL: "claude-opus-5-5" });
+
+    expect(withoutModel.success).toBe(false);
+    expect(withoutModel.error?.message).toContain("ANTHROPIC_MODEL is required when ANTHROPIC_API_KEY is set");
+    expect(withoutModel.error?.message).toContain("the writing model");
+    expect(withoutModel.error?.message).not.toContain("s3cret");
+    expect(withoutKey.success).toBe(false);
+    expect(withoutKey.error?.message).toContain("ANTHROPIC_API_KEY is required when ANTHROPIC_MODEL is set");
+  });
+
+  it("rejects a key or model with spaces or line breaks, without echoing it", () => {
+    for (const value of ["sk-ant-s3cret key", "sk-ant-s3cret\nX-Injected: 1"]) {
+      const result = parseModel({ ANTHROPIC_API_KEY: value, ANTHROPIC_MODEL: "claude-opus-5-5" });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toContain("ANTHROPIC_API_KEY");
+      expect(result.error?.message).not.toContain("s3cret");
+    }
+    expect(parseModel({ ANTHROPIC_API_KEY: "sk-ant-key", ANTHROPIC_MODEL: "claude opus" }).success).toBe(false);
+  });
+});

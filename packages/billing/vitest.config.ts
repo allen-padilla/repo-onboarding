@@ -14,6 +14,8 @@ export default defineConfig({
       STRIPE_PRICE_PRO_MONTHLY: "",
       SMTP_URL: "",
       EMAIL_FROM: "",
+      ANTHROPIC_API_KEY: "",
+      ANTHROPIC_MODEL: "",
     },
   },
 });

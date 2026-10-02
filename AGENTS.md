@@ -155,6 +155,16 @@ Email code lives in `packages/email` (`@startup/email`). It is the only code tha
 
 See `docs/architecture/email.md`.
 
+## Generative Models
+
+Calls to Claude live in `packages/generation` (`@startup/generation`). It is the only code that calls the Anthropic API. Do not import `@anthropic-ai/sdk` elsewhere.
+
+- `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` are server-only. `ANTHROPIC_API_KEY` is a secret. Set both or neither.
+- Product prompts live with the product code that uses them, not in `@startup/generation`.
+- Never log or report prompts, the content sent, or model output.
+
+See `docs/architecture/generative-models.md`.
+
 ## GitHub
 
 GitHub code lives in `packages/github` (`@startup/github`). It is the only code that calls GitHub.
