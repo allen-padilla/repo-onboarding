@@ -65,7 +65,7 @@ Constants chosen by this plan, kept in `packages/onboarding/src/limits.ts` and t
 
 ## Open Questions
 
-- The spec's Security section says "The application only contacts GitHub, TypeSafe, and Anthropic." It also contacts Sentry, PostHog, and the SMTP server. Suggested wording: "Analysis code only contacts GitHub, TypeSafe, and Anthropic." The spec is unchanged until this is agreed.
+None. The spec's Security section said "The application only contacts GitHub, TypeSafe, and Anthropic," but the application also contacts Sentry, PostHog, and the SMTP server. It now says "Analysis code only contacts GitHub, TypeSafe, and Anthropic," as agreed when Slice 7 was finished.
 
 ## Existing System
 
