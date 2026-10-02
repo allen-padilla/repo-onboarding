@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getSession } from "@startup/auth/next";
@@ -48,6 +49,9 @@ export default async function AccountPage({ searchParams }: { searchParams: Sear
           </div>
         </dl>
         {!user.emailVerified && <ResendVerification email={user.email} />}
+        <Link href="/repositories" className="text-sm underline underline-offset-4">
+          Your repositories
+        </Link>
         <SignOutButton />
       </div>
     </main>

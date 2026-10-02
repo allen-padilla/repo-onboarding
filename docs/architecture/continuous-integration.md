@@ -33,7 +33,7 @@ Timeout: 15 minutes.
 1. Starts PostgreSQL and Mailpit service containers.
 2. Installs Playwright Chromium.
 3. Applies database migrations with `pnpm db:migrate`.
-4. Runs `pnpm test:e2e`, which builds `@startup/web` and runs Playwright against a production-style server.
+4. Runs `pnpm test:e2e`, which builds `@startup/web` and runs Playwright against a production-style server, the analysis worker, and local stubs for GitHub, Sentry, and PostHog (`testing.md`).
 5. Uploads the Playwright report and test results on failure.
 
 Timeout: 20 minutes.
@@ -122,6 +122,7 @@ Optional integrations stay unset in CI:
 - Email in the Verify job (`SMTP_URL`, `EMAIL_FROM`): the build runs with email disabled. The E2E job sets both to Mailpit.
 - Sentry and PostHog (`NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_POSTHOG_*`): observability is disabled.
 - Sentry source-map upload (`SENTRY_AUTH_TOKEN`): skipped.
+- Models and GitHub (`TYPESAFE_*`, `ANTHROPIC_*`, `GITHUB_API_TOKEN`): analyses rank files by local signals and write the basic walkthrough. Playwright sets them empty for the web app and the worker, and points `GITHUB_API_URL` at the GitHub stub, so no test reaches GitHub, TypeSafe, or Anthropic.
 
 GitHub sets `CI=true`. Playwright uses it to forbid `test.only`, retry failed tests twice, and run with a single worker. Sentry uses it to print source-map upload logs.
 

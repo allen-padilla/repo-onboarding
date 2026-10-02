@@ -216,9 +216,10 @@ CI installs with `--frozen-lockfile`, so a stale lockfile fails the pull request
 
 ## Ports and End-to-End Tests
 
-Playwright starts the production server on `127.0.0.1:3000` and sets `reuseExistingServer: false`. The E2E environment's `BETTER_AUTH_URL` also assumes port `3000`, and E2E runs use the shared local database.
+Playwright starts the production server on `127.0.0.1:3000` and sets `reuseExistingServer: false`. The E2E environment's `BETTER_AUTH_URL` also assumes port `3000`, and E2E runs use the shared local database. Playwright also starts an analysis worker, which takes jobs from that database.
 
-- Only one `pnpm test:e2e` or `pnpm verify:full` run at a time may own port `3000`, and port `9999` for the observability stub.
+- Only one `pnpm test:e2e` or `pnpm verify:full` run at a time may own port `3000`, port `9998` for the GitHub stub, and port `9999` for the observability stub.
+- No other worker may run during an E2E run, including the one `pnpm dev` starts. It would take the tests' analyses. A worker has no port, so this is not checked: stop `pnpm dev` in every worktree first.
 - Serialize concurrent E2E runs until the test infrastructure is made port-aware.
 - This is a deliberate, safe limitation. A second concurrent run fails loudly because the port is taken. It does not silently test another worktree's server.
 

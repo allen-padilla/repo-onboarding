@@ -130,7 +130,7 @@ Back up the database, or confirm that the provider's point-in-time recovery work
 
 ## Authentication
 
-`BETTER_AUTH_URL` must be the exact public origin users visit, including the scheme, such as `https://app.example.com`.
+`BETTER_AUTH_URL` must be the exact public origin users visit, including the scheme, such as `https://app.example.com`. Better Auth and the repository routes refuse requests whose `Origin` header names any other origin, so a second domain or a `www.` variant that serves the same application must redirect to this one.
 
 - Better Auth uses it as its base URL.
 - `@startup/billing` builds the Stripe Checkout success and cancel URLs from it.

@@ -11,7 +11,7 @@ Implement `docs/specs/repo-onboarding-core.md`:
 
 The work is split into slices. Each slice passes `pnpm verify` on its own and can be reviewed and merged separately.
 
-Status: planned and reviewed. Slices 0 to 6 are implemented; Slice 7 remains. Review Changes lists what the review changed, and Implementation Notes what each slice changed.
+Status: planned, reviewed, and implemented (Slices 0 to 7). The manual checks with real model keys in Verification remain. Review Changes lists what the review changed, and Implementation Notes what each slice changed.
 
 ## Decisions
 
@@ -396,6 +396,19 @@ Differences from the plan, recorded as each slice lands.
   - Workspace packages compile with TypeScript's default target, so the code avoids `.at()` and iterating a `Set` or `Map` directly. `apps/worker` sets `target: ES2022` for its top-level `await`, and has a Vitest test for its Sentry event filter. A signal during start-up waits for the start-up to finish, then stops what it started.
   - A separate agent reviewed the slice before it was committed. Its findings are fixed: a document that could fail to parse after a `done` analysis, multi-line directory paths, the shutdown race during start-up, interruptions across re-queues, the timed-out reason, and a double error report.
   - Checked by hand against the local database and the real GitHub API, with no keys: `octocat/Spoon-Knife` reached `done` with the basic walkthrough; `nodejs/undici` was interrupted with SIGTERM while running, returned to `queued` with its job in `retry`, and reached `done` on attempt 1 after a restart. No request to TypeSafe or Anthropic was made; that waits for the manual check in Verification.
+- **Slice 7.** Differences from the plan:
+  - The repositories layout only wraps both pages in `ph-no-capture`. Each page checks the session itself, because a layout does not know which page it wraps, so it could not send the visitor back to it after sign-in.
+  - Routes check the session before `Origin`, so a signed-out request is `401` whatever its origin. A body without a string `url` is rejected as `INVALID_URL` by `addRepository`, so it counts toward the request limit like any invalid URL. Retry answers `200 { id }`. Error bodies are `{ error: <code> }`, and the pages' copy for each code and failure reason is in `apps/web/src/lib/repositories.ts`.
+  - Delete asks for confirmation on the page, with a second button, rather than a browser dialog.
+  - `serverExternalPackages: ["pg-boss"]` works without adding pg-boss to `apps/web`: Turbopack links it into `.next/node_modules`, as it does for `pg`.
+  - The GitHub stub's fixtures are in `tests/e2e/support/github-fixtures.ts`, apart from the server, so tests can import them. `turns-private-*` and `small-*` are families served under any suffix, so each test has its own. The main and truncated fixtures' listings take 3 seconds, so the tests see the list and the page show an analysis as queued or running before it finishes. Without the delay, the list could render `done` at once, and a first version of the retry test passed without the retry running.
+  - PostHog's autocapture stays off until the project's remote configuration allows it, and the observability stub answered `{}`, so no E2E test could see what autocapture sends. The stub now serves a configuration with autocapture on. The PostHog test clicks the walkthrough's links (their navigation prevented) and the list's repository link; with `ph-no-capture` removed it fails, as it should.
+  - `regularBrowserPage` moved from `auth-pages.spec.ts` to `tests/e2e/support/browser.ts`.
+  - The E2E worker shares the local database, so it also takes any analysis queued there by `pnpm dev` and fails it as not found. `testing.md` says so.
+  - A failed analysis shows when it finished, labeled "Finished", like a done one. The refresher skips refreshes while the tab is hidden and refreshes when it is shown again.
+  - A separate agent reviewed the slice before it was committed. Its findings are fixed: the list page's update could pass without the refresher running, cleanup did not check its deletes, two rejected-URL assertions could pass on the previous message, a failed analysis was labeled "Analyzed", and the repository rules did not name the new port or the E2E worker.
+  - A last pass over the spec's acceptance criteria and the plan, after the review, added: a unit test for the walkthrough renderer (`apps/web` now runs Vitest), markup in the main fixture's description that the E2E test checks is shown as text, a test that an unverified user can retry when email is disabled, an `error.tsx` for the repository pages, the failure reason on the list, a note that a user's analyses run one at a time on a queued repository, the status announced when it changes, focus on Cancel when delete asks to confirm, the `Origin` check in the `add-api-route` skill and in `deployment.md`, and the first steps after `pnpm dev` in the README.
+  - Checked by hand with `pnpm dev`, no keys, and the real GitHub API: `octocat/Spoon-Knife` was added through the route, reached `done`, and its page showed the coverage counts, the local-signals and no-writing-model notes, and links at the analyzed commit, under the title "Repository".
 
 ## Verification
 

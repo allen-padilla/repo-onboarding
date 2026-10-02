@@ -328,11 +328,12 @@ describe("retryAnalysis", () => {
     expect(await rejectionCode(retryAnalysis(alice, repository.id, deps()))).toBe("DAILY_LIMIT");
   });
 
-  it("requires a verified address when email is configured", async () => {
+  it("requires a verified address when email is configured, and not when it is disabled", async () => {
     const { repository } = await addRepository(carol, "github.com/acme/widget", deps({ emailConfigured: false }));
     await fail(repository.id);
 
     expect(await rejectionCode(retryAnalysis(carol, repository.id, deps()))).toBe("VERIFICATION_REQUIRED");
+    expect((await retryAnalysis(carol, repository.id, deps({ emailConfigured: false }))).status).toBe("queued");
   });
 });
 

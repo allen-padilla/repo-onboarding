@@ -74,7 +74,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-Open <http://localhost:3000>. Email sent by the application is captured by the local mail catcher, Mailpit, at <http://localhost:8025>.
+Open <http://localhost:3000>. Email sent by the application is captured by the local mail catcher, Mailpit, at <http://localhost:8025>. Sign up, confirm the address with the link in Mailpit, and add a public GitHub repository on the repositories page.
 
 `pnpm dev` also starts the analysis worker (`apps/worker`), which analyzes repositories in the background and logs `worker ready` once it is connected. It needs no keys: without `TYPESAFE_*`, files are ranked by local signals, and without `ANTHROPIC_*`, the walkthrough is the basic one, a ranked list without prose. Set `GITHUB_API_TOKEN` to go past GitHub's limit of 60 API calls per hour.
 
@@ -155,16 +155,21 @@ Dashed services are optional locally. For how a payment becomes paid access, see
 | Route                        | What it does                                                                                 |
 | ---------------------------- | -------------------------------------------------------------------------------------------- |
 | `/`                          | landing page; "Get Started" goes to `/sign-up`                                               |
-| `/sign-up`                   | name, email, and password; signs the user in and sends a verification email                  |
+| `/sign-up`                   | name, email, and password; signs the user in, sends a verification email, and goes to `/repositories` |
 | `/sign-in`                   | email and password; one message for every failed sign-in                                     |
 | `/forgot-password`           | requests a reset link; the same message for every address                                    |
 | `/reset-password`            | sets a new password from the emailed link                                                    |
 | `/account`                   | signed in only: the address, its verification state, resending verification, and sign-out   |
+| `/repositories`              | signed in only: the user's repositories, their statuses, and the form that adds one          |
+| `/repositories/[id]`         | signed in only: one repository's status, coverage counts, and walkthrough; retry and delete  |
+| `POST /api/repositories`     | signed in only: adds a public GitHub repository by URL and queues its analysis               |
+| `POST /api/repositories/[id]/retry` | signed in only: starts a failed analysis again                                        |
+| `DELETE /api/repositories/[id]` | signed in only: deletes a repository and stops its analysis                               |
 | `/api/auth/*`                | Better Auth: sign-up, sign-in, sign-out, sessions, password reset, and email verification    |
 | `POST /api/billing/checkout` | signed in only: returns a Stripe Checkout URL for the Pro monthly price                      |
 | `POST /api/billing/webhook`  | receives signed Stripe events and syncs subscription state                                   |
 
-The pages are deliberately minimal. Products restyle or replace them and keep the behavior in [docs/specs/auth-pages.md](docs/specs/auth-pages.md). See [docs/architecture/authentication.md](docs/architecture/authentication.md#pages) and [docs/architecture/billing.md](docs/architecture/billing.md).
+The pages are deliberately minimal. Products restyle or replace them and keep the behavior in [docs/specs/auth-pages.md](docs/specs/auth-pages.md) and [docs/specs/repo-onboarding-core.md](docs/specs/repo-onboarding-core.md). See [docs/architecture/authentication.md](docs/architecture/authentication.md#pages), [docs/architecture/repository-analysis.md](docs/architecture/repository-analysis.md#pages-and-routes), and [docs/architecture/billing.md](docs/architecture/billing.md).
 
 ### Repository Layout
 
@@ -178,6 +183,10 @@ The pages are deliberately minimal. Products restyle or replace them and keep th
 | `packages/decision`          | bounded AI decisions (`@startup/decision`)                     |
 | `packages/email`             | transactional email over SMTP (`@startup/email`)               |
 | `packages/env`               | validated environment variables (`@startup/env`)               |
+| `packages/generation`        | calls to Claude (`@startup/generation`)                        |
+| `packages/github`            | the GitHub client for public repositories (`@startup/github`)  |
+| `packages/jobs`              | the pg-boss job queue (`@startup/jobs`)                        |
+| `packages/onboarding`        | repositories, limits, and the analysis (`@startup/onboarding`) |
 | `packages/ui`                | shared React components (`@startup/ui`)                        |
 | `packages/typescript-config` | shared TypeScript configuration                                |
 | `tests/e2e`                  | Playwright tests                                               |
@@ -200,14 +209,14 @@ Run commands from the repository root.
 | `pnpm db:studio`   | opens Drizzle Studio                                                                             |
 | `pnpm db:logs`     | follows the PostgreSQL logs                                                                      |
 | `pnpm test`        | runs the Vitest unit and integration tests; needs no database and no running server              |
-| `pnpm test:e2e`    | builds the application, starts it on port `3000`, runs the Playwright tests, and stops the server |
+| `pnpm test:e2e`    | builds the application, starts it on port `3000` with the worker and local stubs for GitHub, Sentry, and PostHog, runs the Playwright tests, and stops them |
 | `pnpm verify`      | agent harness check, lint, typecheck, tests, production build                                    |
 | `pnpm verify:full` | `pnpm verify`, then the end-to-end tests                                                         |
 | `pnpm agent:check` | checks the structure of the agent harness, such as skill frontmatter and referenced paths        |
 
 Run `pnpm verify` before considering any change complete. Also run `pnpm verify:full` when a change affects application behavior or a complete user workflow, such as authentication, billing, or routing. Documentation-only changes do not need it.
 
-`pnpm test:e2e` needs the local database and Mailpit running (`pnpm db:up`) with migrations applied, and ports `3000` and `9999` free, so stop `pnpm dev` first. Install the Playwright browser once per machine with `pnpm exec playwright install chromium`. On Linux, add `--with-deps` to also install the system libraries the browser needs. See [docs/architecture/testing.md](docs/architecture/testing.md).
+`pnpm test:e2e` needs the local database and Mailpit running (`pnpm db:up`) with migrations applied, and ports `3000`, `9998`, and `9999` free, so stop `pnpm dev` first: its worker would also take the tests' analyses. Install the Playwright browser once per machine with `pnpm exec playwright install chromium`. On Linux, add `--with-deps` to also install the system libraries the browser needs. See [docs/architecture/testing.md](docs/architecture/testing.md).
 
 PostgreSQL and Mailpit run in Docker Compose, configured in `compose.yaml`. They listen on `127.0.0.1` only, so other machines cannot reach them. Connect through `localhost` or `127.0.0.1`. To change the schema, follow the steps in [docs/architecture/database.md](docs/architecture/database.md): generate a migration, read its SQL for anything that loses data, apply it, and commit the schema change, the migration, and its metadata together.
 

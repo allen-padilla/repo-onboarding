@@ -51,6 +51,8 @@ flowchart TD
   web --> billing
   web --> ui
   web --> env
+  web --> github
+  web --> onboarding
   worker --> env
   worker --> jobs
   worker --> onboarding
@@ -166,7 +168,7 @@ Public GitHub repositories through the REST API: repository metadata, branch hea
 - `@startup/github` is server-only. It is the only code that calls GitHub, and it owns the `tar-stream` dependency.
 - `@startup/github/url` exports `parseRepositoryUrl`, the rule for repository URLs that users submit. It is browser-safe and has no imports.
 
-Depends on `@startup/env`. `@startup/onboarding` uses it.
+Depends on `@startup/env`. `@startup/onboarding` uses it. `apps/web` uses `./url` to check URLs in the add form.
 
 See `repository-analysis.md`.
 
@@ -189,6 +191,6 @@ The product's repositories and their analysis.
 - `@startup/onboarding/worker` (server-only): `startAnalysisWorker`, the analysis and its job handlers.
 - `@startup/onboarding/walkthrough`: the stored walkthrough document's schema, `parseWalkthroughDocument`, and `githubUrl`. Imports only `zod`.
 
-Depends on `@startup/db`, `@startup/decision`, `@startup/email`, `@startup/generation`, `@startup/github`, and `@startup/jobs`. `apps/worker` uses `./worker`.
+Depends on `@startup/db`, `@startup/decision`, `@startup/email`, `@startup/generation`, `@startup/github`, and `@startup/jobs`. `apps/web` uses `.` and `./walkthrough` in the repository pages and routes, and `apps/worker` uses `./worker`.
 
 See `repository-analysis.md`.

@@ -49,7 +49,7 @@ describe("safeRedirectPath", () => {
     expect(safeRedirectPath("/account", "/")).toBe("/account");
   });
 
-  it("defaults to the account page", () => {
-    expect(DEFAULT_REDIRECT).toBe("/account");
+  it("defaults to the repository list", () => {
+    expect(DEFAULT_REDIRECT).toBe("/repositories");
   });
 });
