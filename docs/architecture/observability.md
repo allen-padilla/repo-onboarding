@@ -40,7 +40,7 @@ A new page that receives a token in its URL needs the same treatment: add it to 
 
 ## Implementation
 
-Observability is initialized in `apps/web`:
+Observability is initialized in `apps/web`, and error reporting also in `apps/worker` (see Worker below):
 
 - `src/instrumentation-client.ts` initializes Sentry and PostHog in the browser.
 - `src/instrumentation.ts` loads `sentry.server.config.ts` or `sentry.edge.config.ts` for the active runtime.
@@ -54,6 +54,17 @@ Runtime configuration comes from `@startup/env/client`:
 Sentry `dataCollection` settings disable user info, request bodies, database query data, and identifying headers, cookies, and query parameters.
 
 Source-map upload is build-only. It runs only when the build environment provides `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT`. `SENTRY_AUTH_TOKEN` is a secret and is a Turborepo pass-through variable rather than a cache input.
+
+### Worker
+
+`apps/worker` reports errors to Sentry with `@sentry/node` (`src/sentry.ts`), from the same `NEXT_PUBLIC_SENTRY_DSN`, read at runtime. The worker holds repository contents, prompts, and model output while it runs, and none of them may reach Sentry:
+
+- Errors only: `tracesSampleRate` is 0, and every breadcrumb is dropped, since breadcrumbs would record the GitHub and model requests.
+- The web app's `dataCollection` settings, plus `stackFrameVariables: false`. Sentry 11 otherwise attaches local variables to stack frames, and AI inputs and outputs and HTTP bodies to events.
+- `beforeSend` cuts every event down to the exception (type, message, and stack frames without variables), the `analysis_id` and `step` tags, and the event's own metadata. Request data, users, contexts, and extra data are removed.
+- What it reports is already reduced: a failed analysis is an `AnalysisError` with the step and the error's class name, never the original message. Background errors from pg-boss are reported through `setJobQueueErrorReporter`.
+
+PostHog does not run in the worker.
 
 ## Local Development
 

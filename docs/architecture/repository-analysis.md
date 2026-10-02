@@ -4,7 +4,7 @@
 
 A user adds a public GitHub repository, and a background analysis ranks its files and writes a walkthrough. See `docs/specs/repo-onboarding-core.md` for the behavior and `docs/plans/repo-onboarding-core.md` for how it is being built.
 
-This document grows with the implementation. It covers repositories and limits, and GitHub access, so far. The job queue the analysis runs on is described in `jobs.md`.
+This document covers repositories and limits, the analysis, the worker that runs it, and GitHub access. The pages and routes are still to come. The job queue the analysis runs on is described in `jobs.md`.
 
 ## Repositories and Limits
 
@@ -36,6 +36,103 @@ Every rejection raises `RepositoryRequestError` with a `code`: `INVALID_URL`, `R
 ### Deleting
 
 Deleting removes the repository, its analysis, and its walkthrough, and cancels its job in the same transaction. A running analysis notices at its next heartbeat. When the job queue is unavailable, the repository is still deleted: a job whose repository is gone does nothing when it runs.
+
+## Analysis
+
+`runAnalysis` (`packages/onboarding/src/analysis/run.ts`) analyzes one repository at its recorded commit. File contents exist only in its memory and are gone when it returns.
+
+1. **Visibility.** `getRepository` again: a repository deleted or made private since it was added fails as not found.
+2. **Listing.** `getTree` at the commit. A listing GitHub cannot return in full fails as too large.
+3. **Dropping** (`filters.ts`): symbolic links, submodules, lockfiles, build output and other generated files, binaries by extension, vendored directories, files over 100 KB, paths over 1,024 characters (too long for a stored link), and paths marked `linguist-generated` or `linguist-vendored` in the root `.gitattributes`. `gitattributes.ts` reads that file with git's pattern rules: a pattern without a slash matches a file name at any depth, one with a slash is anchored to the root, a pattern ending in `/` never matches a file, and the last matching line wins. Nothing left fails as nothing to analyze.
+4. **Candidates.** Every kept file gets a local score from 0 to 4 and a path-rule role (`signals.ts`), from its path and size alone. The 450 with the highest local scores are read from the archive (`readFiles`, at most 250 MB compressed). A file holding a NUL byte, or whose first five lines say it is generated, is dropped. The first 300 that pass are scored; the rest are left unscored.
+5. **Scoring** (`scoring.ts`). With TypeSafe configured, each file's path and first 16 KB go to `@startup/decision`, 4 at a time, with two questions: `importance` (a `score` on a five-level rubric) and `role` (a `choice` of the five roles). A role answer below 0.6 confidence is replaced by the path rule. Ranking is by score, then local score, then path.
+6. **Walkthrough.** With the writing model configured, `walkthrough.ts` writes it; otherwise `basic.ts` builds the basic one from the ranking.
+
+TypeSafe never fails an analysis. Every file it cannot answer for keeps its local score and path-rule role:
+
+| TypeSafe outcome | Effect |
+| --- | --- |
+| any `DecisionError` | that file falls back |
+| `DecisionAuthenticationError`, `DecisionConfigurationError` (not configured) | every remaining file falls back |
+| `DecisionRateLimitError` asking for 30 seconds or less | waited out once for that file |
+| 5 timeouts or provider errors in a row, or 6 minutes of scoring | every remaining file falls back |
+
+The repository page shows the coverage counts: files listed, dropped (including those dropped when read), left unscored by the 300 limit, and ranked by local signals only. Without TypeSafe, every scored file is ranked by local signals.
+
+### The Written Walkthrough
+
+The model is asked for four sections (summary, directories, key files, reading order), with `effort: "high"` and the bounded zod schema in `walkthrough.ts`. The user turn is one JSON document: the name, the description, an outline of up to 2,000 kept paths, and the top 30 ranked files with their roles and scores, at most 30 KB each and 300 KB in total. JSON keeps repository text inside its fields, and the system prompt says it is data, not instructions.
+
+The output is resolved into the stored document:
+
+- Prose fields may not contain line breaks or code fences; such output is invalid.
+- Key files and reading-order entries whose path is not a kept file are removed, as are repeats. Their roles come from the ranking, or the path rule for an unscored file.
+- A backtick span that exactly names a kept file, or a directory that holds one, becomes a link. Other spans are inline code, or plain text when longer than 80 characters. Nothing else in the output can become a link, markup, or an image.
+- The result must parse as a stored document. The path fields follow the same one-line rule as prose.
+
+Invalid output, output that names no kept file as a key file or in the reading order, or a result that does not parse, is requested once more when at least 3 minutes remain. The writer gets the time that remains minus 1 minute through its `AbortSignal`; running out of it fails the analysis as timed out. Every other writer failure, including a refusal after the fallback model, fails it as "the walkthrough could not be written". `runAnalysis` checks the document once more before it is saved, so a `done` repository always has a walkthrough that parses.
+
+### The Stored Document
+
+`@startup/onboarding/walkthrough` (`walkthrough-document.ts`, zod only) defines the document stored in `repositories.walkthrough`: `kind` (`written` or `basic`) and the four sections as text, inline code, and path segments. Pages parse it again on read (`parseWalkthroughDocument`) and build links with `githubUrl(owner, name, commit, path, kind)`, which percent-encodes every path segment and refuses `.`, `..`, and empty segments, so a link always points at `https://github.com/<owner>/<repo>/blob/<commit>/<path>` or `/tree/`.
+
+## The Worker
+
+`apps/worker` runs `startAnalysisWorker` from `@startup/onboarding/worker` on a `worker` job queue. `deployment.md` describes how to run it.
+
+| Queue | Handler |
+| --- | --- |
+| `analysis` | Runs one analysis. Up to 4 per process (`localConcurrency`), one per user across processes (`groupConcurrency: 1`, the user is the job's group), heartbeat refreshed every 15 seconds. |
+| `analysis-failed` | Dead letters: marks the repository failed ("unexpected") when its `job_id` is still the dead job's `sourceId` and it is queued or running. |
+| `onboarding-maintenance` | Every hour (`0 * * * *`): deletes `analysis_requests` older than 24 hours, and fails repositories queued or running for over 20 minutes whose job is missing or finished. |
+
+### One Run
+
+1. **Claim.** In a transaction that locks the user's row, the handler does nothing when the repository is gone or has another job. It fails the analysis ("unexpected") when its interrupted runs, counted across re-queued jobs, exceed the one retry. It queues a fresh job 15 seconds later when another of the user's repositories is `running` (pg-boss's group limit is best effort), or at once when the worker is stopping, so a job claimed during shutdown does not use its retry. Otherwise it sets `running` and `job_attempt` to the job's `retryCount`.
+2. **Run** under one signal combining the job's own (aborted at a heartbeat once the job is cancelled or retried elsewhere), the 15-minute time limit, and shutdown.
+3. **Save.** Every write matches `job_id` and `job_attempt`, so a stale run never overwrites a retry, a re-queued job, or a deleted repository.
+
+| Outcome | Repository | Job |
+| --- | --- | --- |
+| done | `done`, with the coverage counts and the walkthrough | completed |
+| expected failure | `failed` with its reason, and the counts when known | completed |
+| 15 minutes passed | `failed`, timed out | completed |
+| GitHub rate limit | waited out in the run when it resets within a minute; otherwise a fresh job starts after the reset, at most 3 times, then `failed` | completed |
+| job cancelled or retried elsewhere | nothing is written | the handler throws; pg-boss changes nothing |
+| worker stopping | `queued`, or `failed` ("unexpected") on the last attempt | failed into its retry |
+| unexpected error | `queued`, or `failed` ("unexpected") on the last attempt; reported | failed into its retry |
+
+Failure reasons: `not_found` (missing or not public), `too_large` (listing truncated or archive over 250 MB), `nothing_to_analyze`, `github_rate_limit`, `writer_failed`, `timed_out`, `unexpected`.
+
+### Interruptions
+
+Every interruption counts, a deploy included, and the `analysis` queue allows one retry:
+
+- **Shutdown.** On SIGTERM or SIGINT the worker stops claiming (`offWork`), aborts its handlers, waits for each to return its repository to `queued` and throw `AnalysisInterruptedError`, which pg-boss records as a failure into the retry, and then stops pg-boss. pg-boss's own `stop()` fails running jobs before it aborts their handlers, which would leave them writing, so the worker aborts them first.
+- **Crash or lost heartbeat.** pg-boss's supervisor fails a job whose heartbeat is more than 30 seconds old into its retry. Until then the repository still shows `running`, and the user's other analyses wait.
+- **Second interruption.** The job fails for good and is dead-lettered; the `analysis-failed` handler marks the repository failed.
+- **Re-queued jobs** (another analysis running, a rate limit, a claim during shutdown) start pg-boss's retry count again, so the job data carries `interruptions`, the runs interrupted under earlier jobs. The handler adds it to the job's `retryCount`.
+
+### Errors and Storage
+
+Handlers throw only `AnalysisError` (the step and the error's class name) and `AnalysisInterruptedError`, because pg-boss stores thrown errors in `pgboss.job.output` and copies them into dead letters. Unexpected errors go to the configured reporter, Sentry in `apps/worker`, in the same reduced form.
+
+After an analysis ends, successfully or not, the database holds paths, counts, roles, and the walkthrough, and no file contents, including in the job queue's tables.
+
+### Testing the Analysis
+
+`@startup/onboarding`'s tests run on in-memory PGlite with pg-boss (`@startup/jobs/testing`), drive time with pg-boss's `TestClock`, and use a fake GitHub client (`src/testing/github.ts`) whose fixture files carry a marker string. `worker.test.ts` runs jobs through pg-boss and checks every table, the `pgboss` schema included, for the marker after runs that succeed and fail. PGlite has one connection, so two workers claiming at once is left to the end-to-end tests.
+
+### Time Budget
+
+| Bound | Value |
+| --- | --- |
+| Analysis | 15 minutes, then timed out; pg-boss's 16-minute expiry is a backstop |
+| Scoring | 6 minutes, or 5 TypeSafe timeouts or provider errors in a row |
+| Writer | the time remaining minus 1 minute, then timed out; a second request only with 3 minutes left |
+| GitHub rate limit inside a run | waited out when it resets within 1 minute |
+
+The constants live in `packages/onboarding/src/limits.ts`.
 
 ## GitHub Access
 
@@ -86,4 +183,4 @@ Every error extends `GitHubError`. Messages never contain the token, request hea
 
 ### Testing
 
-Tests inject a fake `fetch` and never open network connections (`src/testing/no-network.ts`). `src/testing/tarball.ts` builds archives shaped like GitHub's for the archive tests.
+`@startup/github`'s tests inject a fake `fetch` and never open network connections (`src/testing/no-network.ts`). `src/testing/tarball.ts` builds archives shaped like GitHub's for the archive tests.

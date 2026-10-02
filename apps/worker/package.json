@@ -1,0 +1,25 @@
+{
+  "name": "@startup/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sentry/node": "^11.0.0",
+    "@startup/env": "workspace:*",
+    "@startup/jobs": "workspace:*",
+    "@startup/onboarding": "workspace:*",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@startup/typescript-config": "workspace:*",
+    "@types/node": "^24",
+    "typescript": "^5",
+    "vitest": "^5.0.2"
+  }
+}

@@ -61,6 +61,7 @@ Some dependencies must change together:
 | `pg`                               | `packages/db`, and `pg-boss`'s own dependency     | `packages/db`'s range must accept the version `pg-boss` requires, so the workspace has one `pg` and one `drizzle-orm` peer variant |
 | `next`                             | `apps/web`, `packages/auth`                       | same exact version; `packages/auth` peer range must include it |
 | `@types/node`                      | every package that uses it                        | major version matches the Node.js version in `.node-version` |
+| `@sentry/nextjs`, `@sentry/node`   | `apps/web`, `apps/worker`                         | same specifier, and the lockfile resolves both to the same version; `@sentry/nextjs` depends on `@sentry/node` |
 
 React and Next.js are peers of each other. A Next.js release supports specific React versions, so check the supported range before upgrading either one.
 

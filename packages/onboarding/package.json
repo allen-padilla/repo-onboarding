@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./worker": "./src/worker.ts",
+    "./walkthrough": "./src/walkthrough-document.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -12,9 +14,12 @@
   },
   "dependencies": {
     "@startup/db": "workspace:*",
+    "@startup/decision": "workspace:*",
     "@startup/email": "workspace:*",
+    "@startup/generation": "workspace:*",
     "@startup/github": "workspace:*",
-    "@startup/jobs": "workspace:*"
+    "@startup/jobs": "workspace:*",
+    "zod": "^4"
   },
   "devDependencies": {
     "@startup/typescript-config": "workspace:*",

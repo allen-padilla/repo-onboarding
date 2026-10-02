@@ -72,7 +72,7 @@ export interface AddStatus {
   readonly unavailable: AddUnavailableReason | null;
 }
 
-type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type Executor = Database | Transaction;
 
 const SUMMARY_COLUMNS = {
@@ -201,6 +201,8 @@ export async function retryAnalysis(
         unscoredCount: null,
         localOnlyCount: null,
         walkthrough: null,
+        // The database's clock, which the maintenance job compares it with.
+        updatedAt: sql`now()`,
       })
       .where(sql`${repositories.id} = ${id} and ${repositories.userId} = ${user.id}`)
       .returning(summaryReturning());
@@ -357,8 +359,9 @@ async function countUsage(db: Executor, userId: string) {
 }
 
 // Holds the user's row until the transaction ends, so one user's requests are
-// checked and saved one at a time and cannot both take the last slot.
-async function lockUser(tx: Transaction, userId: string): Promise<void> {
+// checked and saved one at a time and cannot both take the last slot. The
+// worker takes the same lock to start one analysis per user at a time.
+export async function lockUser(tx: Transaction, userId: string): Promise<void> {
   await tx.execute(sql`select ${schema.user.id} from ${schema.user} where ${schema.user.id} = ${userId} for update`);
 }
 
