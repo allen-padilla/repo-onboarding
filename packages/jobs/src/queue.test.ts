@@ -9,7 +9,7 @@ import { sql } from "@startup/db";
 import { JobQueueUnavailableError } from "./errors";
 import { createJobQueue, getJobQueue, startJobQueue, startShared } from "./queue";
 import { QUEUES, syncQueues } from "./queues";
-import { createTestJobQueue } from "./testing/queue";
+import { createTestJobQueue, createTestJobQueueTemplate } from "./testing/queue";
 import { inTransaction } from "./transaction";
 
 const cleanups: (() => Promise<void>)[] = [];
@@ -180,5 +180,24 @@ describe("syncQueues", () => {
     ]);
     expect(await boss.getQueue(QUEUES.analysis.name)).toMatchObject({ retryLimit: 3 });
     expect(await boss.getQueue("new-queue")).toMatchObject({ retryLimit: 0 });
+  });
+});
+
+describe("createTestJobQueueTemplate", () => {
+  it("gives each test its own copy of the prepared database", async () => {
+    const template = await createTestJobQueueTemplate();
+    cleanups.push(template.close);
+
+    const first = await template.create();
+    cleanups.push(first.close);
+    const second = await template.create();
+    cleanups.push(second.close);
+
+    const id = randomUUID();
+    await first.boss.send(QUEUES.analysis.name, { repositoryId: "r1" }, { id });
+
+    expect(await findJob(first.boss, id)).toBeDefined();
+    expect(await findJob(second.boss, id)).toBeUndefined();
+    expect(await second.boss.getQueue(QUEUES.analysis.name)).toMatchObject({ retryLimit: 1 });
   });
 });

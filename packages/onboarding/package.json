@@ -1,0 +1,25 @@
+{
+  "name": "@startup/onboarding",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@startup/db": "workspace:*",
+    "@startup/email": "workspace:*",
+    "@startup/github": "workspace:*",
+    "@startup/jobs": "workspace:*"
+  },
+  "devDependencies": {
+    "@startup/typescript-config": "workspace:*",
+    "@types/node": "^24",
+    "typescript": "^5",
+    "vitest": "^5.0.2"
+  }
+}
