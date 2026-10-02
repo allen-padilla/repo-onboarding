@@ -4,7 +4,38 @@
 
 A user adds a public GitHub repository, and a background analysis ranks its files and writes a walkthrough. See `docs/specs/repo-onboarding-core.md` for the behavior and `docs/plans/repo-onboarding-core.md` for how it is being built.
 
-This document grows with the implementation. It covers GitHub access so far. The job queue the analysis runs on is described in `jobs.md`.
+This document grows with the implementation. It covers repositories and limits, and GitHub access, so far. The job queue the analysis runs on is described in `jobs.md`.
+
+## Repositories and Limits
+
+`@startup/onboarding` adds, lists, reads, retries, and deletes a user's repositories. Every query filters by the user's ID, and a repository that belongs to another user, or a malformed ID, raises the same `RepositoryNotFoundError` as one that does not exist.
+
+### Limits
+
+| Limit | Counted from |
+| --- | --- |
+| 5 repositories per user | `repositories`, in every status |
+| 10 analyses started per rolling 24 hours | `analysis_requests` rows marked `started`, which outlive deleted repositories |
+| 20 add or retry requests per rolling hour | every `analysis_requests` row, rejected requests included |
+
+Windows are measured with the database's `now()`.
+
+### Adding and Retrying
+
+1. The request is recorded, or rejected over the hourly limit, in a short transaction that locks the user's row.
+2. The URL is parsed (`parseRepositoryUrl`). The repository URL itself is never fetched.
+3. When email is configured, the user's address must be verified.
+4. Cheap reads: an existing repository with the same name is returned as it is (add only), and the slot limit (add only) and the daily cap are checked. A rejected request has made no GitHub call.
+5. GitHub: the repository must be public, and its default branch's latest commit is recorded.
+6. One transaction locks the user's row, repeats step 4 with GitHub's canonical name, saves the repository (or resets a failed one for a retry), marks the request started, and sends the `analysis` job with `inTransaction(tx)`. The repository, its request, and its job are committed together or not at all.
+
+Locking the user's row makes one user's requests check and save one at a time, so two requests cannot both take the last slot, and two adds of the same repository create one. Retry accepts only a failed analysis and keeps its slot. It clears the old results, and records a new job ID and the latest commit.
+
+Every rejection raises `RepositoryRequestError` with a `code`: `INVALID_URL`, `REPOSITORY_NOT_FOUND`, `REPOSITORY_EMPTY`, `REPOSITORY_LIMIT`, `DAILY_LIMIT`, `REQUEST_LIMIT`, `VERIFICATION_REQUIRED`, `GITHUB_UNAVAILABLE`, `QUEUE_UNAVAILABLE`, or `NOT_RETRYABLE`. Routes map the code to a status and a message.
+
+### Deleting
+
+Deleting removes the repository, its analysis, and its walkthrough, and cancels its job in the same transaction. A running analysis notices at its next heartbeat. When the job queue is unavailable, the repository is still deleted: a job whose repository is gone does nothing when it runs.
 
 ## GitHub Access
 

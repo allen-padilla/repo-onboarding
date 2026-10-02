@@ -107,4 +107,6 @@ await db.transaction(async (tx) => {
 
 The helper installs pg-boss and the queues with one instance, then starts a fresh one so its queue cache already holds every queue. A `send` that misses the cache queries through pg-boss's own adapter, which waits forever behind a Drizzle transaction on PGlite's single connection.
 
+`createTestJobQueueTemplate()` prepares that database once, in `beforeAll`, and gives each test a copy of it with its own started instance. A copy takes about a quarter of the time of building the database, which keeps suites with many tests within CI's time limits.
+
 PGlite has one connection, so tests cannot show what happens when several workers claim jobs at once. That needs real Postgres.

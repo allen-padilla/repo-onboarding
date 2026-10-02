@@ -12,6 +12,10 @@ export { TestClock } from "pg-boss";
 
 type TestQueueOptions = Omit<ConstructorOptions, "db" | "backend" | "migrate" | "connectionString">;
 
+export type TestJobQueue = Awaited<ReturnType<typeof createTestJobQueue>>;
+
+const BASE = { backend: "pglite", supervise: false, schedule: false } as const satisfies ConstructorOptions;
+
 /**
  * In-memory Postgres with the repository migrations, the pg-boss schema, and
  * every queue in QUEUES, plus a started pg-boss instance on the same database.
@@ -25,22 +29,38 @@ type TestQueueOptions = Omit<ConstructorOptions, "db" | "backend" | "migrate" | 
  */
 export async function createTestJobQueue(options: TestQueueOptions = {}) {
   const client = new PGlite();
-  const db = drizzle({ client, schema });
-  await migrate(db, { migrationsFolder });
+  await migrate(drizzle({ client, schema }), { migrationsFolder });
 
-  const base = {
-    db: fromPglite(client),
-    backend: "pglite",
-    supervise: false,
-    schedule: false,
-  } as const satisfies ConstructorOptions;
-
-  const installer = new PgBoss({ ...base, migrate: true });
+  const installer = new PgBoss({ ...BASE, db: fromPglite(client), migrate: true });
   await installer.start();
   await syncQueues(installer);
   await installer.stop({ graceful: false });
 
-  const boss = new PgBoss({ ...base, ...options, migrate: false });
+  return startOn(client, options);
+}
+
+/**
+ * Prepares the database of `createTestJobQueue` once, so each test can start
+ * from a copy of it. A copy takes about a quarter of the time of building the
+ * database again. Create the template in `beforeAll` and close it in
+ * `afterAll`.
+ */
+export async function createTestJobQueueTemplate() {
+  const template = await createTestJobQueue();
+  await template.boss.stop({ graceful: false });
+
+  return {
+    /** A copy of the prepared database, with its own started pg-boss instance. */
+    async create(options: TestQueueOptions = {}): Promise<TestJobQueue> {
+      return startOn((await template.client.clone()) as PGlite, options);
+    },
+    close: () => template.client.close(),
+  };
+}
+
+async function startOn(client: PGlite, options: TestQueueOptions) {
+  const db = drizzle({ client, schema });
+  const boss = new PgBoss({ ...BASE, ...options, db: fromPglite(client), migrate: false });
   const errors: Error[] = [];
   boss.on("error", (error: Error) => errors.push(error));
   await boss.start();

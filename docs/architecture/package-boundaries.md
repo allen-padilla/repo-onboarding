@@ -41,6 +41,7 @@ flowchart TD
   generation["@startup/generation"]
   github["@startup/github"]
   jobs["@startup/jobs"]
+  onboarding["@startup/onboarding"]
 
   web --> auth
   web --> billing
@@ -58,6 +59,10 @@ flowchart TD
   github --> env
   jobs --> db
   jobs --> env
+  onboarding --> db
+  onboarding --> email
+  onboarding --> github
+  onboarding --> jobs
 ```
 
 Arrows point from a package to what it depends on. Every package also uses `@startup/typescript-config`, which is left out to keep the graph readable.
@@ -166,3 +171,11 @@ Background jobs in PostgreSQL through pg-boss: producer and worker queues, the q
 Depends on `@startup/db` and `@startup/env`. No application currently depends on it.
 
 See `jobs.md`.
+
+### @startup/onboarding
+
+The product's repositories: adding, listing, reading, retrying, and deleting them, the per-user limits, and queueing their analyses. `addRepository`, `retryAnalysis`, `deleteRepository`, `listRepositories`, `getRepository`, `getAddStatus`, `RepositoryRequestError`, and `RepositoryNotFoundError`.
+
+Server-only. Depends on `@startup/db`, `@startup/email`, `@startup/github`, and `@startup/jobs`. No application currently depends on it.
+
+See `repository-analysis.md`.

@@ -28,7 +28,9 @@ Vitest is used for fast unit and integration-level tests.
 
 Tests should generally live close to the implementation they exercise.
 
-Unit and integration tests never open a network connection. Packages that talk to external services inject fakes. `@startup/email`, `@startup/auth`, and `@startup/jobs` also load a setup file (`src/testing/no-network.ts`) that fails any test that tries to connect. Databases run in memory with PGlite. Tests that need the job queue use `createTestJobQueue()` from `@startup/jobs/testing`, which runs pg-boss on the same PGlite database.
+Unit and integration tests never open a network connection. Packages that talk to external services inject fakes. `@startup/email`, `@startup/auth`, and `@startup/jobs` also load a setup file (`src/testing/no-network.ts`) that fails any test that tries to connect. Databases run in memory with PGlite. Tests that need the job queue use `createTestJobQueue()` from `@startup/jobs/testing`, which runs pg-boss on the same PGlite database. Suites with many tests use `createTestJobQueueTemplate()`, which builds that database once and gives each test a copy.
+
+Timestamp columns have no time zone. Code compares them with the database's `now()`, so tests that backdate rows use `now()` too, never a JavaScript `Date`: PGlite reads such columns in the machine's time zone.
 
 Example:
 
