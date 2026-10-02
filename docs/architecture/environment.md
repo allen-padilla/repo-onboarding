@@ -38,6 +38,8 @@ Both files live in the repository root. The application and the database tooling
 | `EMAIL_FROM`                                                    | no       | server        | sender address; set with `SMTP_URL`           |
 | `TYPESAFE_API_KEY`                                              | no       | server secret | decision models (`@startup/decision`)         |
 | `TYPESAFE_MODEL`                                                | no       | server        | TypeSafe model name                           |
+| `ANTHROPIC_API_KEY`                                             | no       | server secret | writing model (`@startup/generation`); set with `ANTHROPIC_MODEL` |
+| `ANTHROPIC_MODEL`                                               | no       | server        | Claude model name; set with `ANTHROPIC_API_KEY` |
 | `GITHUB_API_TOKEN`                                              | no       | server secret | raises GitHub rate limits; public repositories only |
 | `GITHUB_API_URL`                                                | no       | server        | GitHub API address; tests only                |
 | `NEXT_PUBLIC_SENTRY_DSN`                                        | no       | browser       | enables Sentry                                |
@@ -66,7 +68,7 @@ Optional browser variables treat an empty value (for example `NEXT_PUBLIC_SENTRY
 
 ## Paired Variables
 
-Some optional integrations need several values together. When setting only some of them cannot work, validation rejects the partial configuration instead of treating it as disabled. `SMTP_URL` and `EMAIL_FROM` are set together or both left empty. The error names the missing variable and never a value.
+Some optional integrations need several values together. When setting only some of them cannot work, validation rejects the partial configuration instead of treating it as disabled. `SMTP_URL` and `EMAIL_FROM` are set together or both left empty, and so are `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`. The error names the missing variable and never a value.
 
 ## Application Code
 

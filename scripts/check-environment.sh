@@ -115,6 +115,24 @@ else
   pass "email is disabled (SMTP_URL and EMAIL_FROM are empty)"
 fi
 
+echo "Writing model"
+
+# Optional, but both or neither: @startup/env rejects only one of them.
+anthropic_key_set=""
+anthropic_model_set=""
+[ -n "$(read_value ANTHROPIC_API_KEY)" ] && anthropic_key_set=1
+[ -n "$(read_value ANTHROPIC_MODEL)" ] && anthropic_model_set=1
+
+if [ -n "$anthropic_key_set" ] && [ -n "$anthropic_model_set" ]; then
+  pass "ANTHROPIC_API_KEY and ANTHROPIC_MODEL are set"
+elif [ -n "$anthropic_key_set" ]; then
+  fail "ANTHROPIC_API_KEY is set without ANTHROPIC_MODEL. Set both, or leave both empty to disable the writing model"
+elif [ -n "$anthropic_model_set" ]; then
+  fail "ANTHROPIC_MODEL is set without ANTHROPIC_API_KEY. Set both, or leave both empty to disable the writing model"
+else
+  pass "the writing model is disabled (ANTHROPIC_API_KEY and ANTHROPIC_MODEL are empty)"
+fi
+
 echo "Database"
 
 case "$(read_value DATABASE_URL)" in

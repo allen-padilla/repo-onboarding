@@ -53,6 +53,8 @@ Set these in the deployment platform. `.env.local` is not used in production, an
 | `STRIPE_PRICE_PRO_MONTHLY`                                      | billing  | runtime         | live-mode Price ID                                  |
 | `TYPESAFE_API_KEY`                                              | decision | runtime         | secret                                              |
 | `TYPESAFE_MODEL`                                                | decision | runtime         | TypeSafe model name                                 |
+| `ANTHROPIC_API_KEY`                                             | writing model | runtime | secret; set with `ANTHROPIC_MODEL`              |
+| `ANTHROPIC_MODEL`                                               | writing model | runtime | Claude model name, such as `claude-opus-5-5`   |
 | `GITHUB_API_TOKEN`                                              | yes, in production | runtime | secret; read-only access to public repositories only |
 | `SMTP_URL`                                                      | email    | runtime         | secret; your SMTP provider, never the local Mailpit |
 | `EMAIL_FROM`                                                    | email    | runtime         | sender on a domain you have verified                |

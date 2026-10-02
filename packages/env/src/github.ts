@@ -1,14 +1,11 @@
 import { z } from "zod";
 
+import { printableToken } from "./printable";
+
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
-/**
- * `GITHUB_API_TOKEN`: printable characters with no spaces, so it cannot break
- * the `Authorization` header it is sent in.
- */
-export const githubApiToken = z
-  .string()
-  .regex(/^[\x21-\x7e]+$/, { message: "must contain no spaces or control characters" });
+/** `GITHUB_API_TOKEN`: sent in the `Authorization` header. */
+export const githubApiToken = printableToken;
 
 /**
  * `GITHUB_API_URL`: an `https://` URL, or an `http://` URL on a loopback host

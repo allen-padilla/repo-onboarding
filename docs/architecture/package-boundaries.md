@@ -38,6 +38,7 @@ flowchart TD
   decision["@startup/decision"]
   email["@startup/email"]
   env["@startup/env"]
+  generation["@startup/generation"]
   github["@startup/github"]
   jobs["@startup/jobs"]
 
@@ -53,6 +54,7 @@ flowchart TD
   db --> env
   decision --> env
   email --> env
+  generation --> env
   github --> env
   jobs --> db
   jobs --> env
@@ -134,6 +136,14 @@ Transactional email over SMTP: `sendEmail`, `createEmailSender`, typed message t
 Server-only. Owns the `nodemailer` dependency. Depends on `@startup/env`. The only code that opens an SMTP connection.
 
 See `email.md`.
+
+### @startup/generation
+
+Open-ended generation with Claude through the Anthropic API: `createGenerationClient`, `generateObject` for structured output, `isGenerationConfigured`, and `Generation*` errors. Product prompts belong to the caller.
+
+Server-only. Owns the `@anthropic-ai/sdk` dependency and is the only code that calls the Anthropic API. Depends on `@startup/env`. No application currently depends on it.
+
+See `generative-models.md`.
 
 ### @startup/github
 
