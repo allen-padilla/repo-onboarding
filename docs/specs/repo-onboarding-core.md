@@ -115,6 +115,7 @@ An analysis runs these steps in order:
 - Binaries: images, fonts, audio, video, archives, compiled objects and executables, and any file whose contents turn out not to be text when it is read.
 - Vendored code: `vendor/`, `third_party/`, `node_modules/`, and paths marked `linguist-vendored` in the root `.gitattributes`.
 - Files larger than 100 KB.
+- Files whose path is longer than 1,024 characters.
 - Symbolic links and submodules.
 
 A file found to be generated or binary only when it is read is dropped at that point and does not count toward the 300. At most 450 candidates are read, so when many of them turn out to be generated or binary, fewer than 300 files are scored.
