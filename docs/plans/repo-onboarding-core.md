@@ -422,7 +422,7 @@ pnpm verify:full
 pnpm build && grep -r -E "ANTHROPIC_API_KEY|TYPESAFE_API_KEY|GITHUB_API_TOKEN" apps/web/.next/static   # no output
 ```
 
-Then, by hand:
+Then, by hand. `repo-onboarding-manual-checks.md` sets these out as steps with expected results, with more checks than this list:
 
 - `pnpm dev` with no keys: add a small public repository and read the basic walkthrough.
 - With your own `TYPESAFE_*` and `ANTHROPIC_*` in `.env.local`: read a written walkthrough. This costs real money.
