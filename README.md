@@ -2,6 +2,16 @@
 
 Paste a GitHub repository and get a guided walkthrough of the parts that matter.
 
+## Screenshots
+
+Your repositories, each with its status. The list updates on its own while an analysis runs, and a failed analysis says why.
+
+![The repositories page: an add form showing 4 of 5 slots used, and a list of four repositories, one queued, two done with their commits, and one failed because it is too large to analyze.](docs/screenshots/repositories.png)
+
+A finished walkthrough for `expressjs/express`: coverage counts, what the project is, how it is organized, and its key files with their roles, followed by a suggested reading order. Every file and directory links to GitHub at the analyzed commit. These screenshots were taken without TypeSafe or Anthropic keys, so files are ranked by local signals and the walkthrough has no written explanations. With both keys set, files are scored by TypeSafe and Claude writes an explanation in each section.
+
+![The expressjs/express repository page: status done, links to GitHub and the commit, coverage counts, then the walkthrough's sections, with four top-level directories and fifteen key files labeled entry point, configuration, domain logic, or documentation.](docs/screenshots/walkthrough.png)
+
 ## What this is
 
 Repo Onboarding is a web application in a production-oriented monorepo.
